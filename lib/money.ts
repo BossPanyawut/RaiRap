@@ -1,24 +1,61 @@
-const grouped = new Intl.NumberFormat("th-TH", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+/**
+ * บัญชีหนึ่งใช้สกุลเดียว ไม่มีการแปลงค่า — เปลี่ยนสกุลคือเปลี่ยนสัญลักษณ์ที่แสดง
+ * ยอดที่บันทึกไว้ไม่ถูกแตะ หน้าตั้งค่าบอกผู้ใช้ตรง ๆ ว่าเป็นแบบนี้
+ * รายการที่จะรองรับหลายสกุลจริงต้องเก็บ currency ต่อรายการ + อัตราแลก ณ วันนั้น
+ */
+export const CURRENCIES = {
+  THB: { symbol: "฿", decimals: 2, label: "บาท" },
+  USD: { symbol: "$", decimals: 2, label: "ดอลลาร์สหรัฐ" },
+  EUR: { symbol: "€", decimals: 2, label: "ยูโร" },
+  GBP: { symbol: "£", decimals: 2, label: "ปอนด์สเตอร์ลิง" },
+  // เยนไม่มีหน่วยย่อย — ปัดทศนิยมทิ้งทั้งหมด ไม่ใช่แค่ซ่อน
+  JPY: { symbol: "¥", decimals: 0, label: "เยน" },
+} as const;
 
-const groupedDecimal = new Intl.NumberFormat("th-TH", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+export type Currency = keyof typeof CURRENCIES;
+
+export const DEFAULT_CURRENCY: Currency = "THB";
+
+export function isCurrency(v: unknown): v is Currency {
+  return typeof v === "string" && v in CURRENCIES;
+}
+
+const formatters = new Map<string, Intl.NumberFormat>();
+
+function formatter(min: number, max: number): Intl.NumberFormat {
+  const key = `${min}-${max}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat("th-TH", {
+      minimumFractionDigits: min,
+      maximumFractionDigits: max,
+    });
+    formatters.set(key, f);
+  }
+  return f;
+}
 
 /** คั่นหลักพัน ไม่มีสัญลักษณ์สกุลเงิน */
-export function formatAmount(amount: number, decimals = false): string {
-  return (decimals ? groupedDecimal : grouped).format(amount);
+export function formatAmount(
+  amount: number,
+  currency: Currency = DEFAULT_CURRENCY,
+  decimals = false,
+): string {
+  const max = CURRENCIES[currency].decimals;
+  const d = decimals ? max : 0;
+  return formatter(d, d).format(amount);
 }
 
 /**
- * "฿ 12,450" — เว้นวรรคหลัง ฿ ตาม spec §5
- * ใช้ U+00A0 ไม่ใช่ space ธรรมดา ไม่งั้นบรรทัดตัดคั่นระหว่าง ฿ กับตัวเลขได้
+ * "฿ 12,450" — เว้นวรรคหลังสัญลักษณ์ตาม spec §5
+ * ใช้ U+00A0 ไม่ใช่ space ธรรมดา ไม่งั้นบรรทัดตัดคั่นระหว่างสัญลักษณ์กับตัวเลขได้
  */
-export function formatBaht(amount: number, decimals = false): string {
-  return `฿ ${formatAmount(amount, decimals)}`;
+export function formatMoney(
+  amount: number,
+  currency: Currency = DEFAULT_CURRENCY,
+  decimals = false,
+): string {
+  return `${CURRENCIES[currency].symbol} ${formatAmount(amount, currency, decimals)}`;
 }
 
 export type BudgetStatus = "ok" | "warn" | "over";

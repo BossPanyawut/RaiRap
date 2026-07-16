@@ -4,12 +4,15 @@ import { BalanceTrend } from "@/components/charts/balance-trend";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
-import { currentPeriod, formatMonthTH, shiftPeriod } from "@/lib/dates";
-import { formatBaht } from "@/lib/money";
+import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
+import { formatMoney } from "@/lib/money";
+import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
-  const period = currentPeriod();
+  const settings = await getSettings();
+  const { currency, cycleStartDay } = settings!;
+  const period = currentPeriod(cycleStartDay);
   const supabase = await createClient();
 
   const [{ data: summary }, { data: usage }, { count: totalTx }, { data: history }] =
@@ -62,19 +65,22 @@ export default async function DashboardPage() {
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 pb-16 sm:p-6">
       <GlassCard className="hero-card p-8 sm:p-10">
         <h1 className="text-text-muted text-[15px]">
-          ยอดคงเหลือ {formatMonthTH(period)}
+          ยอดคงเหลือ {formatPeriodTH(period, cycleStartDay)}
         </h1>
         <p className="money mt-2 text-5xl leading-tight font-semibold sm:text-6xl">
-          {formatBaht(income - expense)}
+          {formatMoney(income - expense, currency)}
         </p>
         <p className="text-text-muted mt-3 text-[15px]">
-          รายรับ <span className="tabular">{formatBaht(income)}</span> · รายจ่าย{" "}
-          <span className="tabular">{formatBaht(expense)}</span>
+          รายรับ <span className="tabular">{formatMoney(income, currency)}</span> ·
+          รายจ่าย{" "}
+          <span className="tabular">{formatMoney(expense, currency)}</span>
         </p>
         {summary && Number(summary.balance) !== income - expense && (
           <p className="text-text-muted mt-1 text-sm">
             รวมยอดยกมาจากเดือนก่อน{" "}
-            <span className="tabular">{formatBaht(Number(summary.balance))}</span>
+            <span className="tabular">
+              {formatMoney(Number(summary.balance), currency)}
+            </span>
           </p>
         )}
       </GlassCard>
@@ -82,7 +88,7 @@ export default async function DashboardPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between px-1">
           <h2 className="text-xl font-semibold">หมวดที่ต้องดู</h2>
-          <Link href="/budgets" className="text-accent-deep text-sm underline">
+          <Link href="/budgets" className="text-link text-sm underline">
             ดูงบทั้งหมด
           </Link>
         </div>
@@ -100,7 +106,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-3">
             {needsAttention.map((b) => (
-              <BudgetCard key={b.category_id} usage={b} />
+              <BudgetCard key={b.category_id} usage={b} currency={currency} />
             ))}
           </div>
         )}
@@ -110,11 +116,11 @@ export default async function DashboardPage() {
         <GlassCard>
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-xl font-semibold">แนวโน้มยอดคงเหลือ</h2>
-            <Link href="/analytics" className="text-accent-deep text-sm underline">
+            <Link href="/analytics" className="text-link text-sm underline">
               ดูวิเคราะห์
             </Link>
           </div>
-          <BalanceTrend rows={trend} />
+          <BalanceTrend rows={trend} currency={currency} cycleStartDay={cycleStartDay} />
         </GlassCard>
       )}
     </main>

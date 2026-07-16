@@ -13,7 +13,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatDateTH } from "@/lib/dates";
-import { formatBaht } from "@/lib/money";
+import { formatMoney, type Currency } from "@/lib/money";
 
 export type TransactionRow = EditingTransaction & {
   kind: "income" | "expense";
@@ -24,10 +24,12 @@ export function TransactionList({
   rows,
   categories,
   today,
+  currency,
 }: {
   rows: TransactionRow[];
   categories: CategoryOption[];
   today: string;
+  currency: Currency;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -68,14 +70,14 @@ export function TransactionList({
                   // รายรับ/รายจ่ายต่างกันที่เครื่องหมาย ไม่ใช่แค่สี — ตาบอดสีต้องอ่านออก
                 >
                   {t.kind === "income" ? "+" : "−"}
-                  {formatBaht(t.amount, true)}
+                  {formatMoney(t.amount, currency, true)}
                 </p>
 
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     onClick={() => setEditingId(t.id)}
-                    className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+                    className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
                   >
                     แก้ไข
                   </button>
@@ -83,7 +85,7 @@ export function TransactionList({
                     <input type="hidden" name="id" value={t.id} />
                     <button
                       type="submit"
-                      className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+                      className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
                     >
                       ลบ
                     </button>
@@ -122,7 +124,7 @@ export function AddTransactionCard({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
         >
           ปิด
         </button>

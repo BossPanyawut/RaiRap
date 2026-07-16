@@ -8,11 +8,20 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { formatMonthTH } from "@/lib/dates";
+import { formatPeriodTH } from "@/lib/dates";
+import type { Currency } from "@/lib/money";
 
 type Row = { categoryId: string; name: string; usage: BudgetUsage | null };
 
-function BudgetRow({ row, period }: { row: Row; period: string }) {
+function BudgetRow({
+  row,
+  period,
+  currency,
+}: {
+  row: Row;
+  period: string;
+  currency: Currency;
+}) {
   const [state, action, pending] = useActionState<BudgetState, FormData>(
     setBudget,
     null,
@@ -24,7 +33,12 @@ function BudgetRow({ row, period }: { row: Row; period: string }) {
   return (
     <GlassCard className="p-5">
       {row.usage ? (
-        <ProgressBar label={row.name} spent={spent} budget={budget} />
+        <ProgressBar
+          label={row.name}
+          spent={spent}
+          budget={budget}
+          currency={currency}
+        />
       ) : (
         <p className="text-[15px]">{row.name}</p>
       )}
@@ -43,7 +57,7 @@ function BudgetRow({ row, period }: { row: Row; period: string }) {
             defaultValue={row.usage ? budget : ""}
             placeholder="ไม่ตั้งงบ"
             aria-label={`วงเงินต่อเดือนของหมวด${row.name}`}
-            className="border-glass-border tabular rounded-2xl border bg-white/60 px-4 py-2 text-[15px]"
+            className="border-glass-border tabular rounded-2xl border bg-input px-4 py-2 text-[15px]"
           />
         </label>
 
@@ -67,11 +81,15 @@ export function BudgetEditor({
   prevPeriod,
   nextPeriod,
   rows,
+  currency,
+  cycleStartDay,
 }: {
   period: string;
   prevPeriod: string;
   nextPeriod: string;
   rows: Row[];
+  currency: Currency;
+  cycleStartDay: number;
 }) {
   const [copyState, copyAction, copying] = useActionState<BudgetState, FormData>(
     copyLastMonth,
@@ -83,15 +101,15 @@ export function BudgetEditor({
       <nav className="flex items-center gap-2" aria-label="เลือกเดือน">
         <Link
           href={`/budgets?period=${prevPeriod}`}
-          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
         >
-          ← {formatMonthTH(prevPeriod)}
+          ← {formatPeriodTH(prevPeriod, cycleStartDay)}
         </Link>
         <Link
           href={`/budgets?period=${nextPeriod}`}
-          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+          className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
         >
-          {formatMonthTH(nextPeriod)} →
+          {formatPeriodTH(nextPeriod, cycleStartDay)} →
         </Link>
 
         <form action={copyAction} className="ml-auto">
@@ -111,7 +129,7 @@ export function BudgetEditor({
 
       <div className="grid gap-4 sm:grid-cols-2">
         {rows.map((r) => (
-          <BudgetRow key={r.categoryId} row={r} period={period} />
+          <BudgetRow key={r.categoryId} row={r} period={period} currency={currency} />
         ))}
       </div>
     </>

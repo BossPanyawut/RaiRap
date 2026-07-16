@@ -2,11 +2,14 @@ import { BalanceTrend } from "@/components/charts/balance-trend";
 import { CategoryBreakdown } from "@/components/charts/category-breakdown";
 import { IncomeExpenseBar } from "@/components/charts/income-expense-bar";
 import { GlassCard } from "@/components/ui/glass-card";
-import { currentPeriod, formatMonthTH, shiftPeriod } from "@/lib/dates";
+import { currentPeriod, formatPeriodTH, periodRange, shiftPeriod } from "@/lib/dates";
+import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AnalyticsPage() {
-  const period = currentPeriod();
+  const { currency, cycleStartDay } = (await getSettings())!;
+  const period = currentPeriod(cycleStartDay);
+  const range = periodRange(period, cycleStartDay);
   const from = shiftPeriod(period, -11);
   const supabase = await createClient();
 
@@ -20,8 +23,8 @@ export default async function AnalyticsPage() {
       .from("transactions")
       .select("amount, categories(name)")
       .eq("kind", "expense")
-      .gte("occurred_on", period)
-      .lt("occurred_on", shiftPeriod(period, 1)),
+      .gte("occurred_on", range.from)
+      .lte("occurred_on", range.to),
   ]);
 
   const trend = (balance ?? []).map((r) => ({
@@ -49,10 +52,10 @@ export default async function AnalyticsPage() {
 
       <GlassCard>
         <h2 className="text-xl font-semibold">
-          รายจ่าย {formatMonthTH(period)}
+          รายจ่าย {formatPeriodTH(period, cycleStartDay)}
         </h2>
         <p className="text-text-muted mt-1 mb-4 text-sm">แยกตามหมวด</p>
-        <CategoryBreakdown rows={slices} />
+        <CategoryBreakdown rows={slices} currency={currency} />
       </GlassCard>
 
       <GlassCard>
@@ -60,13 +63,13 @@ export default async function AnalyticsPage() {
         <p className="text-text-muted mt-1 mb-4 text-sm">
           ยกยอดต่อเนื่อง 12 เดือนล่าสุด
         </p>
-        <BalanceTrend rows={trend} />
+        <BalanceTrend rows={trend} currency={currency} cycleStartDay={cycleStartDay} />
       </GlassCard>
 
       <GlassCard>
         <h2 className="text-xl font-semibold">รายรับเทียบรายจ่าย</h2>
         <p className="text-text-muted mt-1 mb-4 text-sm">รายเดือน</p>
-        <IncomeExpenseBar rows={months} />
+        <IncomeExpenseBar rows={months} currency={currency} cycleStartDay={cycleStartDay} />
       </GlassCard>
     </main>
   );

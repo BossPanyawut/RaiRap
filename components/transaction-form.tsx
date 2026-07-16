@@ -68,7 +68,7 @@ export function TransactionForm({
               "flex-1 rounded-full px-4 py-2 text-[15px] transition-colors duration-400 ease-in-out",
               kind === k
                 ? "bg-accent-primary-strong text-white"
-                : "border-glass-border text-text-muted border bg-white/50 hover:bg-white/70",
+                : "border-glass-border text-text-muted border bg-input hover:bg-hover",
             )}
           >
             {k === "expense" ? "รายจ่าย" : "รายรับ"}
@@ -98,7 +98,7 @@ export function TransactionForm({
           name="categoryId"
           defaultValue={editing?.category_id}
           required
-          className="border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 text-[15px]"
+          className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]"
         >
           {options.map((c) => (
             <option key={c.id} value={c.id}>

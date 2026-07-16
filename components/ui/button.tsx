@@ -11,7 +11,7 @@ const variants: Record<Variant, string> = {
   primary:
     "bg-accent-primary-strong text-white shadow-[0_4px_14px_rgb(46_127_224/0.30)] hover:shadow-[0_8px_24px_rgb(46_127_224/0.40)]",
   secondary:
-    "border border-glass-border bg-white/55 text-accent-deep backdrop-blur-[12px] hover:bg-white/75",
+    "border border-glass-border bg-input text-link backdrop-blur-[12px] hover:bg-hover",
 };
 
 function buttonClass(variant: Variant, className?: string) {

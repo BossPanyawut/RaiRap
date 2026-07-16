@@ -46,7 +46,7 @@ export default function LoginPage() {
 
         <p className="text-text-muted mt-6 text-[15px]">
           ยังไม่มีบัญชี{" "}
-          <Link href="/signup" className="text-accent-deep font-medium underline">
+          <Link href="/signup" className="text-link font-medium underline">
             สมัครใช้งาน
           </Link>
         </p>

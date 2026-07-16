@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind ผูก dark: กับ prefers-color-scheme ตามค่าเริ่มต้น แต่ธีมของแอปนี้
+   มาจาก cookie ผ่าน <html data-theme> เพื่อให้เลือกได้เองและไม่มีจอกระพริบ
+   ถ้าไม่ประกาศบรรทัดนี้ dark:* ทุกตัวจะเป็นโค้ดตายที่ไม่มีวันทำงาน */
+@custom-variant dark ([data-theme="dark"] &);
+
 /* Token ทั้งหมดมาจาก docs/design-spec-expense-tracker.md §3
    เหตุผลของทุกการตัดสินอยู่ใน docs/design-direction.md */
 @theme {
@@ -25,6 +30,74 @@
   --color-text-muted: #4f6379;
 
   --radius-glass: 24px;
+
+  /* Token เชิงความหมาย — ห้ามเขียน bg-white/60 หรือ text-accent-deep ตรง ๆ
+     ในคอมโพเนนต์ ค่าพวกนั้นตายตัวและกลายเป็นเทาอ่อนบนพื้นมืด (วัดได้ 1.39:1)
+     ทุกอันนี้มีคู่ของตัวเองในบล็อก dark ข้างล่าง */
+  --color-input: rgb(255 255 255 / 0.6);
+  --color-input-focus: rgb(255 255 255 / 0.85);
+  --color-hover: rgb(255 255 255 / 0.6);
+  --color-link: #144c8c;
+  --color-focus-ring: #144c8c;
+
+  /* สีกราฟเป็น token เพื่อให้ dark mode สลับที่ชั้น CSS ได้ ไม่ต้องส่ง theme
+     ผ่าน props ลงไปทุกคอมโพเนนต์ — ดู lib/chart-palette.ts */
+  --color-chart-1: #144c8c;
+  --color-chart-2: #1e60ad;
+  --color-chart-3: #2974cf;
+  --color-chart-4: #408be3;
+  --color-chart-5: #62a3e9;
+  --color-chart-6: #84b9ef;
+  --color-chart-surface: #edf6fc;
+  --color-chart-line: #2e7fe0;
+  --color-chart-income: #8fddd4;
+  --color-chart-expense: #2e7fe0;
+  --color-chart-axis: #4f6379;
+  --color-chart-grid: rgb(79 99 121 / 0.15);
+  --color-tooltip-bg: rgb(255 255 255 / 0.92);
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────
+   ไม่ใช่การกลับสีอัตโนมัติ ทุกค่าเลือกเองแล้ววัด contrast ใหม่บนพื้นมืด
+   วัดจริงบนการ์ดมืด #16304A:
+     text-primary #E8F1F8 = 11.81:1 · text-muted #9FB4C7 = 6.32:1
+     (ค่า light #4F6379 ได้ 2.18:1 บนพื้นนี้ = ใช้ไม่ได้เลย)
+     ขาวบน accent-primary-strong #2974cf = 4.67:1 → ใช้ค่าเดิมได้ทั้งสองโหมด
+
+   ramp กราฟกลับทิศ อ่อน→เข้ม เพราะบนพื้นมืด "มากกว่า = สว่างกว่า"
+   ชุดของ light บนพื้นมืดจม 3 ขั้น (1.57 / 2.14 / 2.89) ใช้ต่อไม่ได้ */
+:root[data-theme="dark"] {
+  --color-bg-top: #0b1929;
+  --color-bg-bottom: #0e2233;
+
+  --color-glass-surface: rgb(80 130 180 / 0.14);
+  --color-glass-border: rgb(150 190 230 / 0.18);
+
+  --color-text-primary: #e8f1f8;
+  --color-text-muted: #9fb4c7;
+
+  /* พื้นช่องกรอก/hover ต้องเป็นขาวจาง ๆ ไม่ใช่ขาว 60% ซึ่งบนพื้นมืดจะกลายเป็น
+     แผ่นเทาอ่อน แล้วตัวอักษรสว่างบนนั้นเหลือ 1.39:1 */
+  --color-input: rgb(255 255 255 / 0.06);
+  --color-input-focus: rgb(255 255 255 / 0.12);
+  --color-hover: rgb(255 255 255 / 0.08);
+  /* accent-deep #144C8C บนพื้นมืดได้ 1.59:1 — ลิงก์ต้องสว่างขึ้นมาแทน */
+  --color-link: #8fc0f5;
+  --color-focus-ring: #8fc0f5;
+
+  --color-chart-1: #bfdcf7;
+  --color-chart-2: #90c0f0;
+  --color-chart-3: #62a2e9;
+  --color-chart-4: #4289da;
+  --color-chart-5: #3074c3;
+  --color-chart-6: #1e60ad;
+  --color-chart-surface: #16304a;
+  --color-chart-line: #62a2e9;
+  --color-chart-income: #8fddd4;
+  --color-chart-expense: #62a2e9;
+  --color-chart-axis: #9fb4c7;
+  --color-chart-grid: rgb(159 180 199 / 0.18);
+  --color-tooltip-bg: rgb(22 48 74 / 0.95);
 }
 
 @theme inline {
@@ -83,7 +156,7 @@
 
   /* spec §8 */
   :focus-visible {
-    outline: 2px solid var(--color-accent-deep);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 }

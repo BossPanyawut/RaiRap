@@ -1,8 +1,8 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { MAX_SLICES, RAMP, SURFACE } from "@/lib/chart-palette";
-import { formatBaht } from "@/lib/money";
+import { MAX_SLICES, RAMP, SURFACE, TOOLTIP_STYLE } from "@/lib/chart-palette";
+import { formatMoney, type Currency } from "@/lib/money";
 
 export type Slice = { name: string; value: number };
 
@@ -18,7 +18,13 @@ function foldTail(rows: Slice[]): Slice[] {
   ];
 }
 
-export function CategoryBreakdown({ rows }: { rows: Slice[] }) {
+export function CategoryBreakdown({
+  rows,
+  currency,
+}: {
+  rows: Slice[];
+  currency: Currency;
+}) {
   const data = foldTail(rows.filter((r) => r.value > 0));
   const total = data.reduce((s, r) => s + r.value, 0);
 
@@ -52,13 +58,8 @@ export function CategoryBreakdown({ rows }: { rows: Slice[] }) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(v) => formatBaht(Number(v))}
-              contentStyle={{
-                borderRadius: 16,
-                border: "1px solid rgba(255,255,255,0.8)",
-                background: "rgba(255,255,255,0.92)",
-                fontSize: 14,
-              }}
+              formatter={(v) => formatMoney(Number(v), currency)}
+              contentStyle={TOOLTIP_STYLE}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -91,7 +92,7 @@ export function CategoryBreakdown({ rows }: { rows: Slice[] }) {
               {/* แสดงสตางค์เต็ม เหมือนหน้ารายการ — ตารางนี้เป็นตัวแจกแจง
                   ถ้าปัดทีละแถว ผู้ใช้บวกเองแล้วไม่ตรงกับยอดรวมจริง */}
               <td className="tabular py-2 text-right font-mono">
-                {formatBaht(r.value, true)}
+                {formatMoney(r.value, currency, true)}
               </td>
               <td className="tabular text-text-muted py-2 pl-3 text-right text-sm">
                 {Math.round((r.value / total) * 100)}%

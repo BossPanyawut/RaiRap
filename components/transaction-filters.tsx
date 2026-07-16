@@ -33,7 +33,7 @@ export function TransactionFilters({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-text-muted self-start rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+        className="text-text-muted self-start rounded-full px-3 py-1.5 text-sm hover:bg-hover"
       >
         ค้นหาและกรอง{active > 0 ? ` (${active})` : ""}
       </button>
@@ -50,7 +50,7 @@ export function TransactionFilters({
               type="date"
               name="from"
               defaultValue={params.get("from") ?? ""}
-              className="border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 font-normal"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-[15px] font-medium">
@@ -59,7 +59,7 @@ export function TransactionFilters({
               type="date"
               name="to"
               defaultValue={params.get("to") ?? ""}
-              className="border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 font-normal"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-[15px] font-medium">
@@ -67,7 +67,7 @@ export function TransactionFilters({
             <select
               name="category"
               defaultValue={params.get("category") ?? ""}
-              className="border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 font-normal"
             >
               <option value="">ทุกหมวด</option>
               {categories.map((c) => (
@@ -82,7 +82,7 @@ export function TransactionFilters({
             <input
               name="q"
               defaultValue={params.get("q") ?? ""}
-              className="border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 font-normal"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-[15px] font-medium">
@@ -93,7 +93,7 @@ export function TransactionFilters({
               min="0"
               step="0.01"
               defaultValue={params.get("min") ?? ""}
-              className="border-glass-border tabular rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border tabular rounded-2xl border bg-input px-4 py-2.5 font-normal"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-[15px] font-medium">
@@ -104,7 +104,7 @@ export function TransactionFilters({
               min="0"
               step="0.01"
               defaultValue={params.get("max") ?? ""}
-              className="border-glass-border tabular rounded-2xl border bg-white/60 px-4 py-2.5 font-normal"
+              className="border-glass-border tabular rounded-2xl border bg-input px-4 py-2.5 font-normal"
             />
           </label>
         </div>

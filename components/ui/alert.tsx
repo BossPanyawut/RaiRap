@@ -15,7 +15,7 @@ export function Alert({
     <p
       role="alert"
       className={cn(
-        "border-accent-warn/60 flex items-start gap-2 rounded-2xl border bg-white/60 px-4 py-3 text-[15px]",
+        "border-accent-warn/60 flex items-start gap-2 rounded-2xl border bg-input px-4 py-3 text-[15px]",
         className,
       )}
     >

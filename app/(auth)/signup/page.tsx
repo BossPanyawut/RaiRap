@@ -54,7 +54,7 @@ export default function SignUpPage() {
 
         <p className="text-text-muted mt-6 text-[15px]">
           มีบัญชีแล้ว{" "}
-          <Link href="/login" className="text-accent-deep font-medium underline">
+          <Link href="/login" className="text-link font-medium underline">
             เข้าสู่ระบบ
           </Link>
         </p>

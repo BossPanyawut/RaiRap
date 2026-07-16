@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BudgetEditor } from "@/components/budget-editor";
-import { currentPeriod, formatMonthTH, shiftPeriod } from "@/lib/dates";
+import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
+import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function BudgetsPage({
@@ -8,12 +9,13 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { currency, cycleStartDay } = (await getSettings())!;
   const raw = await searchParams;
   const period =
     z.iso
       .date()
       .refine((d) => d.endsWith("-01"))
-      .safeParse(raw.period).data ?? currentPeriod();
+      .safeParse(raw.period).data ?? currentPeriod(cycleStartDay);
 
   const supabase = await createClient();
 
@@ -32,10 +34,12 @@ export default async function BudgetsPage({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 pb-16 sm:p-6">
       <h1 className="px-1 text-2xl font-semibold">
-        งบ {formatMonthTH(period)}
+        งบ {formatPeriodTH(period, cycleStartDay)}
       </h1>
 
       <BudgetEditor
+        currency={currency}
+        cycleStartDay={cycleStartDay}
         period={period}
         prevPeriod={shiftPeriod(period, -1)}
         nextPeriod={shiftPeriod(period, 1)}

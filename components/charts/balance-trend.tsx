@@ -9,13 +9,21 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AXIS, GRID, LINE } from "@/lib/chart-palette";
-import { formatMonthTH } from "@/lib/dates";
-import { formatAmount, formatBaht } from "@/lib/money";
+import { AXIS, GRID, LINE, TOOLTIP_STYLE } from "@/lib/chart-palette";
+import { formatPeriodShortTH, formatPeriodTH } from "@/lib/dates";
+import { formatAmount, formatMoney, type Currency } from "@/lib/money";
 
 export type TrendPoint = { period: string; balance: number };
 
-export function BalanceTrend({ rows }: { rows: TrendPoint[] }) {
+export function BalanceTrend({
+  rows,
+  currency,
+  cycleStartDay,
+}: {
+  rows: TrendPoint[];
+  currency: Currency;
+  cycleStartDay: number;
+}) {
   if (rows.length < 2) {
     return (
       <p className="text-text-muted py-8 text-center text-[15px]">
@@ -39,27 +47,22 @@ export function BalanceTrend({ rows }: { rows: TrendPoint[] }) {
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis
             dataKey="period"
-            tickFormatter={(p: string) => formatMonthTH(p).split(" ")[0].slice(0, 3)}
+            tickFormatter={(p: string) => formatPeriodShortTH(p)}
             tick={{ fill: AXIS, fontSize: 12 }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tickFormatter={(v: number) => formatAmount(v)}
+            tickFormatter={(v: number) => formatAmount(v, currency)}
             tick={{ fill: AXIS, fontSize: 12 }}
             tickLine={false}
             axisLine={false}
             width={56}
           />
           <Tooltip
-            labelFormatter={(p) => formatMonthTH(String(p))}
-            formatter={(v) => [formatBaht(Number(v)), "ยอดคงเหลือสะสม"]}
-            contentStyle={{
-              borderRadius: 16,
-              border: "1px solid rgba(255,255,255,0.8)",
-              background: "rgba(255,255,255,0.92)",
-              fontSize: 14,
-            }}
+            labelFormatter={(p) => formatPeriodTH(String(p), cycleStartDay)}
+            formatter={(v) => [formatMoney(Number(v), currency), "ยอดคงเหลือสะสม"]}
+            contentStyle={TOOLTIP_STYLE}
           />
           <Area
             type="monotone"

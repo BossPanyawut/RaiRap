@@ -2,8 +2,9 @@ import { cn } from "@/lib/cn";
 import {
   budgetPct,
   budgetStatus,
-  formatBaht,
+  formatMoney,
   type BudgetStatus,
+  type Currency,
 } from "@/lib/money";
 
 const barClass: Record<BudgetStatus, string> = {
@@ -35,11 +36,13 @@ export function ProgressBar({
   label,
   spent,
   budget,
+  currency,
   className,
 }: {
   label: string;
   spent: number;
   budget: number;
+  currency: Currency;
   className?: string;
 }) {
   const pct = budgetPct(spent, budget);
@@ -62,8 +65,8 @@ export function ProgressBar({
         aria-valuenow={Math.round(Math.min(pct, 100))}
         // valuenow ถูก clamp ที่ 100 ตามสัญญาของ ARIA — valuetext จึงเป็นที่เดียว
         // ที่บอกความจริงว่าเกินไปเท่าไหร่ ให้ screen reader อ่าน
-        aria-valuetext={`ใช้ไป ${formatBaht(spent)} จากงบ ${formatBaht(budget)} คิดเป็น ${Math.round(pct)}%`}
-        className="h-2 overflow-hidden rounded-full bg-white/50"
+        aria-valuetext={`ใช้ไป ${formatMoney(spent, currency)} จากงบ ${formatMoney(budget, currency)} คิดเป็น ${Math.round(pct)}%`}
+        className="h-2 overflow-hidden rounded-full bg-input"
       >
         <div
           className={cn(
@@ -79,7 +82,7 @@ export function ProgressBar({
       {status === "over" && (
         <p className="flex items-center gap-1.5 text-sm text-text-primary">
           <AlertIcon className="size-4 shrink-0" />
-          <span>ใช้เกินงบ {formatBaht(spent - budget)}</span>
+          <span>ใช้เกินงบ {formatMoney(spent - budget, currency)}</span>
         </p>
       )}
     </div>

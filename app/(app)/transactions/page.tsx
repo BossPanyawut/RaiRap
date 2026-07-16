@@ -6,6 +6,7 @@ import {
   type TransactionRow,
 } from "@/components/transaction-list";
 import { todayISO } from "@/lib/dates";
+import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 // ค่าที่มาจาก URL ไม่น่าเชื่อถือ — parse ทิ้งค่าขยะ แทนที่จะยัดเข้า query ตรง ๆ
@@ -23,6 +24,7 @@ export default async function TransactionsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { currency } = (await getSettings())!;
   const raw = await searchParams;
   const f = filters.parse({
     from: raw.from || undefined,
@@ -71,6 +73,7 @@ export default async function TransactionsPage({
         rows={(rows ?? []) as TransactionRow[]}
         categories={categories ?? []}
         today={today}
+        currency={currency}
       />
     </main>
   );

@@ -1,31 +1,29 @@
 import { redirect } from "next/navigation";
 import { signOut } from "../(auth)/actions";
 import { Nav } from "@/components/nav";
-import { createClient } from "@/lib/supabase/server";
+import { getAlerts } from "@/lib/alerts";
+import { getSettings } from "@/lib/profile";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const settings = await getSettings();
 
-  // proxy.ts เด้งไปแล้วในเคสปกติ อันนี้กันพลาดถ้า matcher หลุด — และทำให้
-  // user ที่ส่งลง children ไม่มีทางเป็น null
-  if (!user) redirect("/login");
+  // proxy.ts เด้งไปแล้วในเคสปกติ อันนี้กันพลาดถ้า matcher หลุด
+  if (!settings) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .single();
+  const alerts = await getAlerts();
 
   return (
     <>
-      <Nav displayName={profile?.display_name ?? null} signOut={signOut} />
+      <Nav
+        displayName={settings.displayName}
+        signOut={signOut}
+        alerts={alerts}
+        currency={settings.currency}
+      />
       {children}
     </>
   );

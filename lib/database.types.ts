@@ -108,22 +108,57 @@ export type Database = {
         }
         Relationships: []
       }
+      dismissed_alerts: {
+        Row: {
+          category_id: string
+          dismissed_at: string
+          period_month: string
+          threshold: number
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          dismissed_at?: string
+          period_month: string
+          threshold: number
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          dismissed_at?: string
+          period_month?: string
+          threshold?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dismissed_alerts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
           currency: string
+          cycle_start_day: number
           display_name: string | null
           id: string
         }
         Insert: {
           created_at?: string
           currency?: string
+          cycle_start_day?: number
           display_name?: string | null
           id: string
         }
         Update: {
           created_at?: string
           currency?: string
+          cycle_start_day?: number
           display_name?: string | null
           id?: string
         }
@@ -211,7 +246,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      delete_my_account: { Args: never; Returns: undefined }
+      period_of: { Args: { cycle_day: number; d: string }; Returns: string }
+      reset_my_categories: { Args: never; Returns: undefined }
+      seed_default_categories: { Args: { target: string }; Returns: undefined }
     }
     Enums: {
       category_kind: "income" | "expense"

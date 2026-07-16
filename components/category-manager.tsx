@@ -39,7 +39,7 @@ function CategoryRow({ category }: { category: Category }) {
               defaultValue={category.name}
               aria-label="ชื่อหมวดหมู่"
               maxLength={40}
-              className="border-glass-border flex-1 rounded-2xl border bg-white/60 px-4 py-2 text-[15px]"
+              className="border-glass-border flex-1 rounded-2xl border bg-input px-4 py-2 text-[15px]"
             />
             <Button type="submit" disabled={pending} className="px-4 py-2 text-sm">
               บันทึก
@@ -62,7 +62,7 @@ function CategoryRow({ category }: { category: Category }) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+              className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
             >
               เปลี่ยนชื่อ
             </button>
@@ -75,7 +75,7 @@ function CategoryRow({ category }: { category: Category }) {
               />
               <button
                 type="submit"
-                className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-white/60"
+                className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
               >
                 {category.is_archived ? "เลิกซ่อน" : "ซ่อน"}
               </button>
@@ -103,7 +103,7 @@ function AddCategory({ kind }: { kind: "income" | "expense" }) {
         aria-label={kind === "expense" ? "ชื่อหมวดรายจ่ายใหม่" : "ชื่อหมวดรายรับใหม่"}
         maxLength={40}
         required
-        className="border-glass-border flex-1 rounded-2xl border bg-white/60 px-4 py-2.5 text-[15px]"
+        className="border-glass-border flex-1 rounded-2xl border bg-input px-4 py-2.5 text-[15px]"
       />
       <Button type="submit" disabled={pending}>
         เพิ่ม

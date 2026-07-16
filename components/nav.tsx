@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AlertBell } from "@/components/alert-bell";
 import { cn } from "@/lib/cn";
+import type { Alert } from "@/lib/alerts";
+import type { Currency } from "@/lib/money";
 
 const links = [
   { href: "/", label: "ภาพรวม" },
@@ -10,14 +13,19 @@ const links = [
   { href: "/budgets", label: "งบ" },
   { href: "/analytics", label: "วิเคราะห์" },
   { href: "/categories", label: "หมวดหมู่" },
+  { href: "/settings", label: "ตั้งค่า" },
 ];
 
 export function Nav({
   displayName,
   signOut,
+  alerts,
+  currency,
 }: {
   displayName: string | null;
   signOut: () => Promise<void>;
+  alerts: Alert[];
+  currency: Currency;
 }) {
   const pathname = usePathname();
 
@@ -43,7 +51,7 @@ export function Nav({
                 "shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-colors duration-400 ease-in-out",
                 active
                   ? "bg-accent-primary-strong text-white"
-                  : "text-text-muted hover:bg-white/60",
+                  : "text-text-muted hover:bg-hover",
               )}
             >
               {l.label}
@@ -51,6 +59,8 @@ export function Nav({
           );
         })}
       </nav>
+
+      <AlertBell alerts={alerts} currency={currency} />
 
       {displayName && (
         // ชื่อคนห้ามตัดกลาง — dictionary breaking ของไทยจะหั่นชื่อที่รอยต่อคำ
@@ -62,7 +72,7 @@ export function Nav({
       <form action={signOut} className="shrink-0">
         <button
           type="submit"
-          className="text-text-muted rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-colors duration-400 ease-in-out hover:bg-white/60"
+          className="text-text-muted rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-colors duration-400 ease-in-out hover:bg-hover"
         >
           ออก
         </button>

@@ -18,10 +18,10 @@ export function Field({
         id={id}
         aria-describedby={hintId}
         className={cn(
-          "border-glass-border rounded-2xl border bg-white/60 px-4 py-2.5 text-[15px]",
+          "border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]",
           "placeholder:text-text-muted/70",
           "transition-colors duration-400 ease-in-out",
-          "focus:bg-white/85",
+          "focus:bg-input-focus",
           className,
         )}
         {...props}

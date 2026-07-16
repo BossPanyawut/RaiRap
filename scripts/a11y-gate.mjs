@@ -47,24 +47,35 @@ await page.fill("#password", PW);
 await page.click("button[type=submit]");
 await page.waitForURL(APP + "/", { timeout: 20000 });
 
-const PAGES = ["/", "/transactions", "/budgets", "/analytics", "/categories"];
+const PAGES = ["/", "/transactions", "/budgets", "/analytics", "/categories", "/settings"];
 
-console.log("--- axe-core (wcag2a + wcag2aa) ---");
-for (const path of PAGES) {
-  await page.goto(APP + path, { waitUntil: "networkidle" });
-  await page.waitForTimeout(600);
-  await page.addScriptTag({ content: AXE });
-  const r = await page.evaluate(async () =>
-    await window.axe.run(document, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
-      // ตัว dev overlay ของ Next ไม่ใช่โค้ดเรา
-      exclude: [["nextjs-portal"]],
-    }),
-  );
-  const v = r.violations.filter((x) => x.impact !== "minor");
-  check(`axe ${path}`, v.length === 0,
-    v.length ? v.map((x) => `${x.id}(${x.impact}) x${x.nodes.length}`).join(", ") : "ไม่มี violation");
+for (const theme of ["light", "dark"]) {
+  console.log(`\n--- axe-core (wcag2a + wcag2aa) — โหมด${theme === "light" ? "สว่าง" : "มืด"} ---`);
+  await page.context().addCookies([
+    { name: "rairap-theme", value: theme, url: APP },
+  ]);
+  for (const path of PAGES) {
+    await page.goto(APP + path, { waitUntil: "networkidle" });
+    await page.waitForTimeout(600);
+    const applied = await page.evaluate(() => document.documentElement.dataset.theme);
+    if (applied !== theme) {
+      check(`ธีม ${theme} ถูกใส่ที่ <html> ตั้งแต่ HTML แรก`, false, `ได้ ${applied}`);
+      continue;
+    }
+    await page.addScriptTag({ content: AXE });
+    const r = await page.evaluate(async () =>
+      await window.axe.run(document, {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+        // ตัว dev overlay ของ Next ไม่ใช่โค้ดเรา
+        exclude: [["nextjs-portal"]],
+      }),
+    );
+    const v = r.violations.filter((x) => x.impact !== "minor");
+    check(`axe ${theme} ${path}`, v.length === 0,
+      v.length ? v.map((x) => `${x.id}(${x.impact}) x${x.nodes.length}`).join(", ") : "ไม่มี violation");
+  }
 }
+await page.context().addCookies([{ name: "rairap-theme", value: "light", url: APP }]);
 
 console.log("\n--- 360px ไม่ล้นแนวนอน ---");
 const m = await browser.newPage({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 3 });
