@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/* Token ทั้งหมดมาจาก docs/design-spec-expense-tracker.md §3
+   เหตุผลของทุกการตัดสินอยู่ใน docs/design-direction.md */
+@theme {
+  --color-bg-top: #eaf4fc;
+  --color-bg-bottom: #d6eaf9;
+
+  --color-glass-surface: rgb(255 255 255 / 0.55);
+  --color-glass-border: rgb(255 255 255 / 0.8);
+
+  --color-accent-primary: #2e7fe0;
+  /* พื้นทึบที่แบกตัวอักษรขาว — spec §7 บอกให้ปุ่มหลักใช้ accent-primary แต่
+     ขาวบน #2E7FE0 ได้ 4.02:1 ตกเกณฑ์ AA ที่ spec §8 สั่งไว้เอง (axe ยืนยัน 4.01)
+     ค่านี้คือ accent-primary ผสม accent-deep 20% → 4.67:1 ฮิวเดิมของ brand
+     --accent-primary ตัวเดิมยังใช้กับเส้นกราฟ/ไอคอน/ลิงก์บนพื้นอ่อนตามเดิม */
+  --color-accent-primary-strong: #2974cf;
+  --color-accent-deep: #144c8c;
+  --color-accent-mint: #8fddd4;
+  --color-accent-warn: #f5a97f;
+
+  --color-text-primary: #1b2a3d;
+  /* spec §3 ระบุ #5C7086 แต่ได้ 4.13:1 บน --color-bg-bottom = ตก WCAG AA ที่ spec §8
+     สั่งไว้เอง ค่านี้ได้ 5.00–5.64:1 ทุกพื้น — design-direction.md §B */
+  --color-text-muted: #4f6379;
+
+  --radius-glass: 24px;
+}
+
+@theme inline {
+  /* Space Grotesk ไม่มี glyph ไทย จึงเป็นฟอนต์หัวข้อตาม spec §4 ไม่ได้
+     สงวนไว้ให้ตัวเลขจำนวนเงินอย่างเดียว — design-direction.md §A */
+  --font-money: var(--font-space-grotesk);
+  --font-sans: var(--font-plex-thai);
+  --font-mono: var(--font-plex-mono);
+}
+
+@layer base {
+  body {
+    min-height: 100dvh;
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    /* ไทยซ้อนสระบน + วรรณยุกต์สองชั้น ("ปั๊ม", "ที่") — 1.5 ที่จูนมาสำหรับ Latin จะชนบรรทัดบน */
+    line-height: 1.65;
+  }
+
+  /* กันขาวโพลนถ้าชั้น fixed ข้างล่างไม่ทันวาด */
+  html {
+    background-color: var(--color-bg-bottom);
+  }
+
+  /* gradient เป็นชั้น fixed แยก ไม่ใช่ background-attachment: fixed ซึ่งพังบน iOS Safari */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      /* blur ของ linear gradient เรียบ ๆ คืนค่า gradient เดิม — backdrop-filter จะเป็น
+         no-op ถ้าไม่มีความแปรปรวนความถี่ต่ำให้ป้าย ก้อนสีพวกนี้คือ "อะไรให้สะท้อน"
+         ที่ spec §5 เรียกหา ใช้เฉพาะ accent token ที่มีอยู่ ไม่เพิ่มสีใหม่ */
+      radial-gradient(
+        60rem 40rem at 12% 8%,
+        color-mix(in oklch, var(--color-accent-mint) 34%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        52rem 36rem at 88% 18%,
+        color-mix(in oklch, var(--color-accent-primary) 16%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        46rem 46rem at 72% 88%,
+        color-mix(in oklch, var(--color-accent-mint) 24%, transparent),
+        transparent 65%
+      ),
+      linear-gradient(
+        180deg,
+        var(--color-bg-top) 0%,
+        var(--color-bg-bottom) 100%
+      );
+  }
+
+  /* spec §8 */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-deep);
+    outline-offset: 2px;
+  }
+}
+
+@utility glass {
+  background: var(--color-glass-surface);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-glass);
+  box-shadow: 0 8px 32px rgb(20 76 140 / 0.08);
+}
+
+/* ไม่รองรับ backdrop-filter → ทึบไปเลย ไม่งั้นข้อความลอยบนพื้นโปร่งอ่านไม่ออก */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass {
+    background: rgb(255 255 255 / 0.92);
+  }
+}
+
+@utility money {
+  font-family: var(--font-money);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* แถบที่เลื่อนได้แต่ไม่ต้องโชว์ scrollbar — ใช้กับเมนูบนจอแคบ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* แถบงบประมาณ — spec §7. ห้ามใช้สีแดง (spec §3)
+   สถานะตรงกับ v_budget_usage.status ใน development-plan.md §2 */
+.bar-ok {
+  background: var(--color-accent-mint);
+}
+
+.bar-warn {
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-mint),
+    var(--color-accent-warn)
+  );
+}
+
+/* "เข้มขึ้น" ผสมจาก token ตรง ๆ ไม่ใช่ hex เดาเอง — ฮิวเดิม สว่างลด */
+.bar-over {
+  background: color-mix(in oklch, var(--color-accent-warn) 82%, #000);
+}
+
+/* Liquid Light Sweep — spec §6. hero card ใบเดียวเท่านั้น */
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero-card::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.4) 50%,
+    transparent 70%
+  );
+  /* ดัน pseudo-element ขึ้น compositor layer แยก ลอยเหนือชั้น blur
+     → blur คำนวณครั้งเดียว ไม่ใช่ทุกเฟรม */
+  will-change: transform;
+  animation: sweep 6s ease-in-out infinite;
+}
+
+/* animate transform เท่านั้น — background-position สั่ง paint ใหม่ทุกเฟรม
+   บนการ์ดที่มี blur(20px) = บังคับคำนวณ blur ซ้ำ 60 ครั้ง/วินาที */
+@keyframes sweep {
+  from {
+    transform: translateX(-60%);
+  }
+  to {
+    transform: translateX(60%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card::before {
+    animation: none;
+  }
+}

@@ -1,0 +1,67 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import { env } from "@/lib/env";
+
+const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+
+/**
+ * Next 16 เปลี่ยนชื่อ Middleware → Proxy ไฟล์ต้องชื่อ proxy.ts และ export ชื่อ proxy
+ * (tutorial ของ Supabase ทั้งหมดยังเขียน middleware.ts ซึ่งใช้กับ Next 16 ไม่ได้)
+ *
+ * หน้าที่เดียวของไฟล์นี้คือรีเฟรช session cookie ให้ต่ออายุ + เด้ง path ที่ยังไม่ล็อกอิน
+ * เอกสาร Next เตือนเองว่า proxy ไม่ใช่ที่สำหรับ authorization — ตัวจริงคือ RLS ใน Postgres
+ * (ยืนยันแล้วใน scripts/rls-gate.mjs) การ redirect ตรงนี้เป็นแค่ UX ไม่ใช่ด่านกันข้อมูล
+ */
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value } of cookiesToSet) {
+            request.cookies.set(name, value);
+          }
+          response = NextResponse.next({ request });
+          for (const { name, value, options } of cookiesToSet) {
+            response.cookies.set(name, value, options);
+          }
+        },
+      },
+    },
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  if (!user && !isPublic) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (pathname === "/login" || pathname === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
