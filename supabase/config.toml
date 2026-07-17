@@ -144,8 +144,11 @@ max_catalogs = 2
 # [storage.analytics.buckets.my-warehouse]
 
 # Store vector embeddings in S3 for large and durable datasets
+# ปิดไว้ — แอปนี้ไม่ใช้ vector เลย และ free tier เปิดไม่ได้ (`config push` จะตาย
+# ด้วย 402 "upgrade to a paid tier") ค่า default ของ CLI คือ true จึงต้องปิดเอง
+# ไม่งั้นดัน config ขึ้น cloud ไม่ได้อีกเลย
 [storage.vector]
-enabled = true
+enabled = false
 max_buckets = 10
 max_indexes = 5
 
@@ -156,11 +159,20 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+#
+# ไฟล์นี้ถูก `supabase config push` ดันขึ้น cloud ทั้งบล็อก [auth] ค่าตรงนี้จึงต้อง
+# เป็นของ production ไม่ใช่ของเครื่อง ไม่งั้น push แล้วลิงก์ยืนยันในอีเมลจะชี้กลับ
+# localhost ของผู้ใช้เอง — local dev ยังทำงานได้เพราะ localhost อยู่ใน
+# additional_redirect_urls ข้างล่าง และแอปนี้ใช้แค่ email+password ไม่มี OAuth redirect
+site_url = "https://rairap.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://rairap.vercel.app/**",
+  "https://*-namebosspanya2-5925s-projects.vercel.app/**",
+  "http://localhost:3000/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -179,7 +191,9 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+# ต้องตรงกับ zod schema ในแอป (app/(auth)/actions.ts, settings/actions.ts) ไม่งั้น
+# ฟอร์มบอกว่าต้อง 8 แต่ server ยอมรับ 6 = สองความจริง
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -223,8 +237,18 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+#
+# ปิดชั่วคราวตามที่ตกลงกันไว้ — SMTP ในตัวของ Supabase จำกัด 2 ฉบับ/ชั่วโมงทั้ง
+# project และยกเพดานไม่ได้ถ้า smtp_host ยังว่าง (ลองแล้ว Management API ปฏิเสธ)
+# เปิดทิ้งไว้แปลว่าคนที่ 3 ที่สมัครในชั่วโมงเดียวกันสมัครไม่ได้เลย
+#
+# ⚠️ ราคาที่จ่าย: ใครก็สมัครด้วยอีเมลของคนอื่นได้ ไม่มีการพิสูจน์ความเป็นเจ้าของ
+# เจ้าของอีเมลตัวจริงมาทวงบัญชีคืนไม่ได้ และรีเซ็ตรหัสผ่านก็ส่งไปหาเจ้าของจริง
+# ซึ่งไม่ใช่คนที่ถือบัญชีอยู่
+# → ก่อนเปิดให้คนนอกใช้: ต่อ SMTP (Authentication → SMTP Settings) แล้วกลับเป็น true
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
+# แอปตรวจรหัสเดิมเองอยู่แล้วใน settings/actions.ts (changePassword/changeEmail)
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"

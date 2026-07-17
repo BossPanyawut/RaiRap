@@ -46,7 +46,11 @@ npm run seed:demo      # demo@rairap.dev / demo1234
 - **`security_invoker = true` ทุก view** ค่า default ทำให้ view ข้าม RLS ของตารางข้างใต้
 - **ฟังก์ชันที่แตะข้อมูลผู้ใช้ห้ามรับ uuid เป็น argument** ให้อ่าน `auth.uid()` เอง
   (`reset_my_categories`, `delete_my_account`) ไม่งั้นยิงใส่บัญชีคนอื่นได้
-- **`.env.local` มีแค่ anon key** service_role ห้ามหลุดถึงเบราว์เซอร์
+- **`.env.local` มีแค่ anon/publishable key** service_role / `sb_secret_…` ห้ามหลุดถึงเบราว์เซอร์
+- **ค่า auth ของ cloud อยู่ใน `supabase/config.toml`** แก้ที่ไฟล์แล้ว `supabase config push`
+  ห้ามคลิกใน Dashboard จะถูก push ทับ. `config push` ดันทั้งไฟล์ ไม่ใช่แค่ `[auth]`
+- **ตอนนี้ `enable_confirmations = false`** ใครก็สมัครด้วยอีเมลคนอื่นได้ —
+  ชั่วคราวจนกว่าจะต่อ SMTP (SMTP ในตัวจำกัด 2 ฉบับ/ชั่วโมง ยกเพดานไม่ได้)
 - **`getUser()` ไม่ใช่ `getSession()` ฝั่ง server** getSession อ่าน cookie ดิบโดยไม่ตรวจลายเซ็น
 
 ### Next 16
@@ -125,11 +129,12 @@ npm run seed:demo      # demo@rairap.dev / demo1234
 ## Gate
 
 ```bash
-npm run gate        # 134 ข้อ — ต้องมี supabase + dev server รันอยู่
+npm run gate        # 143 ข้อ — ต้องมี supabase + dev server รันอยู่
 ```
 
 | คำสั่ง | ครอบอะไร |
 |---|---|
+| `gate:env` | URL/key คนละที่กันต้อง throw · publishable ชนะ anon |
 | `gate:rls` | ยิง query/insert/update/delete ข้าม user ด้วย JWT จริง · view ไม่เป็นประตูหลัง · anon เข้าไม่ถึง |
 | `gate:settings` | รอบเดือนเทียบกับ Postgres · constraint · RLS ของ dismissed_alerts · ล้างข้อมูลข้าม user · CSV ไป-กลับ · ลบบัญชี |
 | `gate:extras` | รายการเกิดซ้ำ idempotent + เลขงวด · ยอดแยกบัญชี · storage ข้าม user (อัป/โหลด/list/ลบ) |

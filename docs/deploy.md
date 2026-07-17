@@ -44,7 +44,18 @@ view + function ครบเหมือนในเครื่อง
 
 ## 5. ตั้งค่า Auth
 
-Dashboard → Authentication → **URL Configuration**
+ค่า auth ทั้งหมดอยู่ใน **`supabase/config.toml`** ซึ่งอยู่ใน git — แก้ที่ไฟล์แล้ว
+`npx supabase config push` อย่าไปคลิกใน Dashboard เพราะจะถูก push ทับ
+
+> `config push` ดันทั้งไฟล์ ไม่ใช่แค่ `[auth]` ค่าใน `[storage]` `[api]` `[db]`
+> ก็ขึ้นไปด้วย ถ้าเจอ `402 upgrade to a paid tier` แปลว่ามีฟีเจอร์ที่ free tier
+> ใช้ไม่ได้เปิดค้างอยู่ (เช่น `[storage.vector]` ที่ CLI ตั้ง `true` มาให้เอง)
+
+**สถานะตอนนี้: `enable_confirmations = false`** — ปิดยืนยันอีเมลไว้เพราะ SMTP
+ในตัวจำกัด 2 ฉบับ/ชั่วโมง แปลว่า **ใครก็สมัครด้วยอีเมลของคนอื่นได้**
+ต่อ SMTP แล้วกลับเป็น `true` ก่อนเปิดให้คนนอกใช้
+
+ค่าที่เหลือดูได้ที่ Dashboard → Authentication → **URL Configuration**
 - **Site URL**: โดเมนจริงของคุณ (เช่น `https://rairap.vercel.app`)
 - **Redirect URLs**: เพิ่ม `https://<โดเมน>/**`
 
