@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import {
-  deleteTransaction,
-} from "@/app/(app)/transactions/actions";
+import { deleteTransaction } from "@/app/(app)/transactions/actions";
 import {
   TransactionForm,
+  type AccountOption,
   type CategoryOption,
   type EditingTransaction,
 } from "@/components/transaction-form";
+import { ReceiptButton } from "@/components/receipt-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -17,17 +17,21 @@ import { formatMoney, type Currency } from "@/lib/money";
 
 export type TransactionRow = EditingTransaction & {
   kind: "income" | "expense";
+  receipt_path: string | null;
   categories: { name: string } | null;
+  accounts: { name: string } | null;
 };
 
 export function TransactionList({
   rows,
   categories,
+  accounts,
   today,
   currency,
 }: {
   rows: TransactionRow[];
   categories: CategoryOption[];
+  accounts: AccountOption[];
   today: string;
   currency: Currency;
 }) {
@@ -49,12 +53,15 @@ export function TransactionList({
             {editingId === t.id ? (
               <TransactionForm
                 categories={categories}
+                accounts={accounts}
                 today={today}
                 editing={t}
                 onDone={() => setEditingId(null)}
               />
             ) : (
-              <div className="flex items-center gap-3">
+              // สี่ก้อน (ข้อมูล/ยอด/ใบเสร็จ/ปุ่ม) ยัดแถวเดียวไม่ลง 360px
+              // ให้ปุ่มตกบรรทัดสองบนจอแคบ แล้วกลับมาแถวเดียวตั้งแต่ sm ขึ้นไป
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px]">
                     {t.categories?.name ?? "หมวดที่ถูกลบ"}
@@ -62,6 +69,7 @@ export function TransactionList({
                   <p className="text-text-muted truncate text-sm">
                     {formatDateTH(t.occurred_on)}
                     {t.note ? ` · ${t.note}` : ""}
+                    {t.accounts ? ` · ${t.accounts.name}` : ""}
                   </p>
                 </div>
 
@@ -73,23 +81,30 @@ export function TransactionList({
                   {formatMoney(t.amount, currency, true)}
                 </p>
 
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(t.id)}
-                    className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
-                  >
-                    แก้ไข
-                  </button>
-                  <form action={deleteTransaction}>
-                    <input type="hidden" name="id" value={t.id} />
+                <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
+                  <ReceiptButton
+                    transactionId={t.id}
+                    receiptPath={t.receipt_path}
+                  />
+
+                  <div className="flex shrink-0 gap-1">
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={() => setEditingId(t.id)}
                       className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
                     >
-                      ลบ
+                      แก้ไข
                     </button>
-                  </form>
+                    <form action={deleteTransaction}>
+                      <input type="hidden" name="id" value={t.id} />
+                      <button
+                        type="submit"
+                        className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
+                      >
+                        ลบ
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             )}
@@ -102,9 +117,11 @@ export function TransactionList({
 
 export function AddTransactionCard({
   categories,
+  accounts,
   today,
 }: {
   categories: CategoryOption[];
+  accounts: AccountOption[];
   today: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -129,7 +146,11 @@ export function AddTransactionCard({
           ปิด
         </button>
       </div>
-      <TransactionForm categories={categories} today={today} />
+      <TransactionForm
+        categories={categories}
+        accounts={accounts}
+        today={today}
+      />
     </GlassCard>
   );
 }

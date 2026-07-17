@@ -8,6 +8,7 @@ export type FormState = { error: string } | { ok: true } | null;
 
 const transactionInput = z.object({
   categoryId: z.uuid("เลือกหมวดหมู่"),
+  accountId: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
   amount: z.coerce
     .number("ใส่จำนวนเงิน")
     .positive("จำนวนเงินต้องมากกว่า 0")
@@ -19,6 +20,7 @@ const transactionInput = z.object({
 function parse(formData: FormData) {
   return transactionInput.safeParse({
     categoryId: formData.get("categoryId"),
+    accountId: formData.get("accountId") ?? "",
     amount: formData.get("amount"),
     occurredOn: formData.get("occurredOn"),
     note: formData.get("note") || undefined,
@@ -57,6 +59,7 @@ export async function createTransaction(
   const { error } = await supabase.from("transactions").insert({
     user_id: user.id,
     category_id: parsed.data.categoryId,
+    account_id: parsed.data.accountId,
     kind: category.kind,
     amount: parsed.data.amount,
     occurred_on: parsed.data.occurredOn,
@@ -91,6 +94,7 @@ export async function updateTransaction(
     .from("transactions")
     .update({
       category_id: parsed.data.categoryId,
+      account_id: parsed.data.accountId,
       kind: category.kind,
       amount: parsed.data.amount,
       occurred_on: parsed.data.occurredOn,

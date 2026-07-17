@@ -4,18 +4,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
-import type { CategoryOption } from "@/components/transaction-form";
+import type { AccountOption, CategoryOption } from "@/components/transaction-form";
 
 export function TransactionFilters({
   categories,
+  accounts,
 }: {
   categories: CategoryOption[];
+  accounts: AccountOption[];
 }) {
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState(false);
 
-  const active = ["from", "to", "category", "min", "max", "q"].filter((k) =>
+  const active = ["from", "to", "category", "account", "min", "max", "q"].filter((k) =>
     params.get(k),
   ).length;
 
@@ -77,6 +79,23 @@ export function TransactionFilters({
               ))}
             </select>
           </label>
+          {accounts.length > 0 && (
+            <label className="flex flex-col gap-1.5 text-[15px] font-medium">
+              บัญชี
+              <select
+                name="account"
+                defaultValue={params.get("account") ?? ""}
+                className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 font-normal"
+              >
+                <option value="">ทุกบัญชี</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="flex flex-col gap-1.5 text-[15px] font-medium">
             คำในบันทึกย่อ
             <input

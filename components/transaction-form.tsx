@@ -12,10 +12,12 @@ import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 
 export type CategoryOption = { id: string; name: string; kind: "income" | "expense" };
+export type AccountOption = { id: string; name: string };
 
 export type EditingTransaction = {
   id: string;
   category_id: string;
+  account_id: string | null;
   amount: number;
   occurred_on: string;
   note: string | null;
@@ -23,11 +25,13 @@ export type EditingTransaction = {
 
 export function TransactionForm({
   categories,
+  accounts,
   today,
   editing,
   onDone,
 }: {
   categories: CategoryOption[];
+  accounts: AccountOption[];
   today: string;
   editing?: EditingTransaction;
   onDone?: () => void;
@@ -107,6 +111,27 @@ export function TransactionForm({
           ))}
         </select>
       </div>
+
+      {accounts.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="accountId" className="text-[15px] font-medium">
+            บัญชี
+          </label>
+          <select
+            id="accountId"
+            name="accountId"
+            defaultValue={editing?.account_id ?? ""}
+            className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]"
+          >
+            <option value="">ไม่ระบุ</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <Field
         id="occurredOn"

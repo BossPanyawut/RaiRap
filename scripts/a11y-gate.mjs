@@ -47,7 +47,7 @@ await page.fill("#password", PW);
 await page.click("button[type=submit]");
 await page.waitForURL(APP + "/", { timeout: 20000 });
 
-const PAGES = ["/", "/transactions", "/budgets", "/analytics", "/categories", "/settings"];
+const PAGES = ["/", "/transactions", "/budgets", "/goals", "/analytics", "/report", "/accounts", "/recurring", "/categories", "/settings"];
 
 for (const theme of ["light", "dark"]) {
   console.log(`\n--- axe-core (wcag2a + wcag2aa) — โหมด${theme === "light" ? "สว่าง" : "มืด"} ---`);

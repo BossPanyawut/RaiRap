@@ -11,7 +11,11 @@ const links = [
   { href: "/", label: "ภาพรวม" },
   { href: "/transactions", label: "รายการ" },
   { href: "/budgets", label: "งบ" },
+  { href: "/goals", label: "เป้าหมาย" },
   { href: "/analytics", label: "วิเคราะห์" },
+  { href: "/report", label: "รายงาน" },
+  { href: "/accounts", label: "บัญชี" },
+  { href: "/recurring", label: "รายการซ้ำ" },
   { href: "/categories", label: "หมวดหมู่" },
   { href: "/settings", label: "ตั้งค่า" },
 ];

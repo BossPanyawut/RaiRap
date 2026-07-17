@@ -34,6 +34,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          kind: Database["public"]["Enums"]["account_kind"]
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          kind?: Database["public"]["Enums"]["account_kind"]
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          kind?: Database["public"]["Enums"]["account_kind"]
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           amount: number
@@ -164,43 +194,72 @@ export type Database = {
         }
         Relationships: []
       }
-      transactions: {
+      recurring_rules: {
         Row: {
+          account_id: string | null
           amount: number
           category_id: string
           created_at: string
+          ends_on: string | null
+          every: number
+          freq: Database["public"]["Enums"]["recur_freq"]
           id: string
+          is_paused: boolean
           kind: Database["public"]["Enums"]["category_kind"]
+          last_run_on: string | null
           note: string | null
-          occurred_on: string
-          updated_at: string
+          starts_on: string
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount: number
           category_id: string
           created_at?: string
+          ends_on?: string | null
+          every?: number
+          freq: Database["public"]["Enums"]["recur_freq"]
           id?: string
+          is_paused?: boolean
           kind: Database["public"]["Enums"]["category_kind"]
+          last_run_on?: string | null
           note?: string | null
-          occurred_on: string
-          updated_at?: string
+          starts_on: string
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           category_id?: string
           created_at?: string
+          ends_on?: string | null
+          every?: number
+          freq?: Database["public"]["Enums"]["recur_freq"]
           id?: string
+          is_paused?: boolean
           kind?: Database["public"]["Enums"]["category_kind"]
+          last_run_on?: string | null
           note?: string | null
-          occurred_on?: string
-          updated_at?: string
+          starts_on?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "transactions_category_id_kind_fkey"
+            foreignKeyName: "recurring_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_account_balance"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "recurring_rules_category_id_kind_fkey"
             columns: ["category_id", "kind"]
             isOneToOne: false
             referencedRelation: "categories"
@@ -208,8 +267,128 @@ export type Database = {
           },
         ]
       }
+      saving_goals: {
+        Row: {
+          achieved_at: string | null
+          created_at: string
+          id: string
+          name: string
+          target_amount: number
+          target_date: string | null
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          target_amount: number
+          target_date?: string | null
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          target_amount?: number
+          target_date?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["category_kind"]
+          note: string | null
+          occurred_on: string
+          receipt_path: string | null
+          recurring_occurred_on: string | null
+          recurring_rule_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["category_kind"]
+          note?: string | null
+          occurred_on: string
+          receipt_path?: string | null
+          recurring_occurred_on?: string | null
+          recurring_rule_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["category_kind"]
+          note?: string | null
+          occurred_on?: string
+          receipt_path?: string | null
+          recurring_occurred_on?: string | null
+          recurring_rule_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_account_balance"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "transactions_category_id_kind_fkey"
+            columns: ["category_id", "kind"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id", "kind"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_rule_id_fkey"
+            columns: ["recurring_rule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
+      v_account_balance: {
+        Row: {
+          account_id: string | null
+          balance: number | null
+          expense: number | null
+          income: number | null
+          is_archived: boolean | null
+          kind: Database["public"]["Enums"]["account_kind"] | null
+          name: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_budget_usage: {
         Row: {
           budget_amount: number | null
@@ -247,12 +426,15 @@ export type Database = {
     }
     Functions: {
       delete_my_account: { Args: never; Returns: undefined }
+      materialize_recurring: { Args: { until?: string }; Returns: number }
       period_of: { Args: { cycle_day: number; d: string }; Returns: string }
       reset_my_categories: { Args: never; Returns: undefined }
       seed_default_categories: { Args: { target: string }; Returns: undefined }
     }
     Enums: {
+      account_kind: "cash" | "bank" | "credit" | "ewallet"
       category_kind: "income" | "expense"
+      recur_freq: "daily" | "weekly" | "monthly" | "yearly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -383,7 +565,9 @@ export const Constants = {
   },
   public: {
     Enums: {
+      account_kind: ["cash", "bank", "credit", "ewallet"],
       category_kind: ["income", "expense"],
+      recur_freq: ["daily", "weekly", "monthly", "yearly"],
     },
   },
 } as const

@@ -239,8 +239,12 @@
   animation: sweep 6s ease-in-out infinite;
 }
 
-/* animate transform เท่านั้น — background-position สั่ง paint ใหม่ทุกเฟรม
-   บนการ์ดที่มี blur(20px) = บังคับคำนวณ blur ซ้ำ 60 ครั้ง/วินาที */
+/* animate transform เท่านั้น ห้าม background-position
+   วัดจริงด้วย CDP trace บน Chrome ตลอด 1 รอบ sweep (6.5 วินาที):
+     transform + will-change → Paint 4 ครั้ง (คือไม่ repaint เลย compositor ขยับ layer)
+     background-position     → Paint 1,562 ครั้ง + RasterTask 1,562  = มากกว่า 390 เท่า
+   ทุก paint บนการ์ดนี้ลาก blur(20px) ไปคำนวณใหม่ทั้งใบ
+   สคริปต์ที่ใช้วัดอยู่ใน development-plan.md §10 */
 @keyframes sweep {
   from {
     transform: translateX(-60%);
@@ -254,4 +258,56 @@
   .hero-card::before {
     animation: none;
   }
+}
+
+/* รายงาน PDF (spec 2.6) — ใช้ print ของเบราว์เซอร์ ไม่ใช่ jsPDF/pdfmake
+   เพราะ PDF lib ต้องฝังฟอนต์ไทยเอง แล้วยังตัดคำไทยไม่ถูกอยู่ดี
+   เบราว์เซอร์มีฟอนต์อยู่แล้วและรู้จัก dictionary line-breaking ของไทย
+   "บันทึกเป็น PDF" ในหน้าต่าง print ให้ผลที่อ่านออกจริงและเลือกข้อความได้ */
+@media print {
+  /* พื้นกระจกบน gradient กินหมึกและทำให้ตัวอักษรจาง — พิมพ์เป็นขาว-ดำล้วน */
+  :root {
+    --color-text-primary: #000;
+    --color-text-muted: #333;
+    --color-glass-surface: transparent;
+    --color-glass-border: #ccc;
+  }
+
+  body::before,
+  .hero-card::before {
+    display: none !important;
+  }
+
+  .glass {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* ห้ามตัดแถวตารางคาหน้า */
+  tr,
+  li {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}
+
+.print-only {
+  display: none;
 }

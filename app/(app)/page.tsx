@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { BudgetCard } from "@/components/budget-card";
 import { BalanceTrend } from "@/components/charts/balance-trend";
+import { ForecastCard } from "@/components/forecast-card";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
+import { forecast } from "@/lib/forecast";
 import { formatMoney } from "@/lib/money";
 import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
 
   const income = Number(summary?.income ?? 0);
   const expense = Number(summary?.expense ?? 0);
+  const f = forecast(period, cycleStartDay, income, expense);
 
   const trend = (history ?? []).map((r) => ({
     period: r.period_month!,
@@ -111,6 +114,8 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      <ForecastCard forecast={f} currency={currency} />
 
       {trend.length >= 2 && (
         <GlassCard>
