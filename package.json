@@ -12,10 +12,11 @@
     "gate:rls": "node scripts/rls-gate.mjs",
     "gate:e2e": "node scripts/e2e-gate.mjs",
     "gate:a11y": "node scripts/a11y-gate.mjs",
-    "gate": "npm run gate:rls && npm run gate:settings && npm run gate:extras && npm run gate:e2e && npm run gate:a11y",
+    "gate": "npm run gate:env && npm run gate:rls && npm run gate:settings && npm run gate:extras && npm run gate:e2e && npm run gate:a11y",
     "seed:demo": "node scripts/seed-demo.mjs",
     "gate:settings": "node --experimental-strip-types scripts/settings-gate.mjs",
-    "gate:extras": "node scripts/extras-gate.mjs"
+    "gate:extras": "node scripts/extras-gate.mjs",
+    "gate:env": "node scripts/env-gate.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
