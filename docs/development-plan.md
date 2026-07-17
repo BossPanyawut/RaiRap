@@ -203,35 +203,7 @@ Schema ข้อ 2 เผื่อทางไว้แล้ว: multi-account 
 | Numeric ผ่าน PostgREST | `numeric` ส่งกลับเป็น JSON number | `numeric(12,2)` ปลอดภัยในช่วง double; ห้ามใช้ float คำนวณแล้วเซฟกลับ |
 | RLS ผ่าน view | view default เป็น security definer → RLS ถูกข้าม | `security_invoker = true` ทุก view + ทดสอบข้าม user ใน Phase 1 gate |
 
-## 8. ปัญหาสภาพแวดล้อม (เจอตอน Phase 0)
-
-`~/.zshrc` บรรทัด 2 มีสองคำสั่งติดกันโดยไม่มีตัวคั่น:
-
-```sh
-export PATH="/usr/local/bin:$PATH"export NODE_ENV=development
-```
-
-zsh อ่าน `"/usr/local/bin:$PATH"export` เป็น **คำเดียว** แล้ว `export` ได้ arg สองตัว ผลคือ:
-
-1. **`NODE_ENV=development` ถูก export ทั้งเครื่อง** → `next build` ล้มด้วย
-   `TypeError: Cannot read properties of null (reading 'useContext')` ตอน prerender
-   `/_global-error`. กระทบทุก production build บนเครื่องนี้ ไม่ใช่แค่ repo นี้
-2. **`/usr/local/bin` ไม่เคยเข้า PATH** — เข้าไปเป็น `/usr/local/binexport` (ซ้ำ 2 ครั้ง)
-   ของที่ติดตั้งไว้ใน `/usr/local/bin` เรียกใช้ผ่าน PATH ไม่ได้
-
-**แก้:** แยกเป็นสองบรรทัด
-
-```sh
-export PATH="/usr/local/bin:$PATH"
-export NODE_ENV=development   # ← พิจารณาลบทิ้ง ไม่ควรตั้งค่านี้ทั้งเครื่อง
-```
-
-`NODE_ENV` ควรให้เครื่องมือตั้งเอง (`next dev` ตั้ง development, `next build` ตั้ง production)
-การ pin ไว้ทั้งเครื่องคือสาเหตุของข้อ 1
-
-ชั่วคราวระหว่างยังไม่แก้: `NODE_ENV=production npm run build`
-
-## 8.5 สิ่งที่เจอตอน Phase 1–5 (ของจริง ไม่ใช่ทฤษฎี)
+## 8. สิ่งที่เจอตอน Phase 1–5 (ของจริง ไม่ใช่ทฤษฎี)
 
 รันซ้ำได้ด้วย `npm run gate` (58 ข้อ) — ต้องมี local Supabase (`npx supabase start`) และ `npm run dev` ก่อน
 

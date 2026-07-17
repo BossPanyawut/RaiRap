@@ -26,8 +26,9 @@ npm run dev
 npm run seed:demo      # demo@rairap.dev / demo1234
 ```
 
-`npm run build` ล้มบนเครื่องนี้เพราะ `~/.zshrc` ตั้ง `NODE_ENV=development` ทั้งเครื่อง
-ใช้ `NODE_ENV=production npm run build` — รายละเอียดใน development-plan.md §8
+ถ้า `npm run build` ล้มด้วย `TypeError: Cannot read properties of null (reading 'useContext')`
+แปลว่ามี `NODE_ENV` ตั้งค้างใน environment (`echo $NODE_ENV`) — `next build` ต้องตั้งเอง
+ชั่วคราวใช้ `NODE_ENV=production npm run build`
 
 ## กฎที่ห้ามผิด
 
@@ -103,7 +104,7 @@ npm run seed:demo      # demo@rairap.dev / demo1234
 - **ห้ามใช้สีแดง** (spec §3) สถานะเกินงบสื่อด้วย **ไอคอน + ข้อความ** เสมอ ไม่ใช่สีอย่างเดียว
 - **กระจกเป็น no-op ถ้าพื้นหลังเรียบ** blur ของ linear gradient คืนค่า gradient เดิม
   ก้อนสี radial ใน `body::before` คือสิ่งที่ทำให้ `backdrop-filter` เห็นผล ห้ามลบ
-- **sweep animate `transform` เท่านั้น** `background-position` บังคับคำนวณ blur ใหม่ทุกเฟรม
+- **sweep animate `transform` เท่านั้น** วัดแล้ว: transform = Paint 4 ครั้ง/รอบ, background-position = 1,562 (390 เท่า)
 
 ### กราฟ
 
@@ -124,13 +125,14 @@ npm run seed:demo      # demo@rairap.dev / demo1234
 ## Gate
 
 ```bash
-npm run gate        # 95 ข้อ — ต้องมี supabase + dev server รันอยู่
+npm run gate        # 134 ข้อ — ต้องมี supabase + dev server รันอยู่
 ```
 
 | คำสั่ง | ครอบอะไร |
 |---|---|
 | `gate:rls` | ยิง query/insert/update/delete ข้าม user ด้วย JWT จริง · view ไม่เป็นประตูหลัง · anon เข้าไม่ถึง |
 | `gate:settings` | รอบเดือนเทียบกับ Postgres · constraint · RLS ของ dismissed_alerts · ล้างข้อมูลข้าม user · CSV ไป-กลับ · ลบบัญชี |
+| `gate:extras` | รายการเกิดซ้ำ idempotent + เลขงวด · ยอดแยกบัญชี · storage ข้าม user (อัป/โหลด/list/ลบ) |
 | `gate:e2e` | ยอดเงินตรงผลรวมมือ · ขอบ 79/80/101% · JS ↔ Postgres ไม่ drift · กราฟ |
 | `gate:a11y` | axe-core ทั้ง light/dark ทุกหน้า · 360px · focus ring · reduced-motion |
 

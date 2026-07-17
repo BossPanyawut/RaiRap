@@ -51,17 +51,13 @@ Next.js 16 (App Router) · React 19 · Tailwind v4 · Supabase (Postgres + Auth 
 - **ขอบเขตสถานะงบต้องตรงกันระหว่าง `lib/money.ts` กับ `v_budget_usage`** — `gate:e2e`
   ยิงเทียบทุกค่าขอบ ถ้าใครแก้ข้างเดียวจะ fail
 
-## หมายเหตุสำหรับเครื่องนี้
+## แก้ปัญหา
 
-`~/.zshrc` บรรทัด 2 มีสองคำสั่งติดกันโดยไม่มีตัวคั่น:
+**`npm run build` ล้มด้วย `TypeError: Cannot read properties of null (reading 'useContext')`**
 
-```sh
-export PATH="/usr/local/bin:$PATH"export NODE_ENV=development
+มี `NODE_ENV` ตั้งค้างไว้ใน environment `next build` ต้องเป็นคนตั้งค่านี้เอง
+เช็คด้วย `echo $NODE_ENV` ถ้าไม่ว่าง ให้หาที่มาแล้วเอาออก หรือชั่วคราว:
+
+```bash
+NODE_ENV=production npm run build
 ```
-
-ทำให้ (1) `NODE_ENV=development` ถูก export ทั้งเครื่อง → `npm run build` ล้มด้วย
-`TypeError: Cannot read properties of null (reading 'useContext')` และ
-(2) `/usr/local/bin` ไม่เคยเข้า PATH (กลายเป็น `/usr/local/binexport`)
-
-ชั่วคราว: `NODE_ENV=production npm run build` — แก้ถาวรดู "ปัญหาสภาพแวดล้อม" ใน
-[`docs/development-plan.md`](docs/development-plan.md)

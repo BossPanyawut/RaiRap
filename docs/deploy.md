@@ -91,9 +91,7 @@ npx vercel --prod
 
 หรือผ่านหน้าเว็บ: Import repo → ใส่ env สองตัวข้างบน → Deploy
 
-**Build command ปล่อยค่าเริ่มต้น** (`next build`) — ปัญหา `NODE_ENV=development`
-ที่ต้องใช้ `NODE_ENV=production npm run build` เป็นเรื่องของเครื่องคุณเองเท่านั้น
-(`~/.zshrc` บรรทัด 2 — ดู development-plan.md §8) Vercel ไม่มีปัญหานี้
+**Build command ปล่อยค่าเริ่มต้น** (`next build`)
 
 ---
 
