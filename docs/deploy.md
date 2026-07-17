@@ -65,6 +65,11 @@ Supabase ให้ SMTP ในตัวมาเพื่อ**ทดสอบเ
 - ลืมรหัสผ่านก็กินโควตาเดียวกัน
 - ไม่มี captcha → บอทยิงสมัครรัว ๆ ทำให้คนจริงสมัครไม่ได้ทั้งวัน
 
+**ยกเพดานเฉย ๆ ไม่ได้** — ลองแล้ว Management API ปฏิเสธการตั้ง
+`rate_limit_email_sent` สูงกว่า 2 ตราบใดที่ `smtp_host` ยังว่าง และการเปิด
+`mailer_autoconfirm` ก็ไม่ช่วย เพราะตัวนับถูกเช็คแม้ไม่ได้ส่งอีเมลจริง
+Supabase ล็อกไว้ที่ชั้น platform
+
 ก่อนเปิดให้คนใช้ต้องต่อ SMTP ของตัวเอง: Authentication → **SMTP Settings**
 ใช้ Resend / SendGrid / Amazon SES (free tier พอสำหรับเริ่มต้นทั้งหมด)
 แล้วขยับ `rate_limit_email_sent` ขึ้นตามที่ผู้ให้บริการรองรับ

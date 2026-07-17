@@ -5,7 +5,14 @@
  *
  * สร้างบัญชีทดสอบ 2 บัญชีบน project จริง แล้วลบทิ้งด้วย delete_my_account()
  * ตอนจบ (ซึ่งเป็นการทดสอบ cascade ไปในตัว) ถ้าสคริปต์ตายกลางทาง อาจมีบัญชี
- * ชื่อ verify-*@rairap-test.dev ค้าง ลบได้ที่ Dashboard → Authentication
+ * ชื่อ verify-* ค้าง ลบได้ที่ Dashboard → Authentication
+ *
+ * ⚠️ ต้องต่อ SMTP ของตัวเองก่อน (Authentication → SMTP Settings)
+ * SMTP ในตัวของ Supabase จำกัด 2 อีเมล/ชั่วโมงทั้ง project และ **ยกเพดานไม่ได้**
+ * ถ้าไม่ต่อ SMTP เอง — ลองแล้ว Management API ปฏิเสธการตั้ง rate_limit_email_sent
+ * สูงกว่านี้ ตราบใดที่ smtp_host ยังว่าง ส่วน mailer_autoconfirm ก็ไม่ช่วย
+ * เพราะตัวนับยังถูกเช็คแม้ไม่ได้ส่งอีเมลจริง
+ * → ถ้าเจอ "email rate limit exceeded" แปลว่ายังไม่ได้ต่อ SMTP ไม่ใช่โค้ดพัง
  *
  *   node scripts/verify-cloud.mjs
  */

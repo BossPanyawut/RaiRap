@@ -155,3 +155,4 @@ vite.config.ts.timestamp-*
 next-env.d.ts
 /.next/
 .gate-output/
+.env*
