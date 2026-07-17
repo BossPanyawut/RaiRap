@@ -35,18 +35,12 @@ view + function ครบเหมือนในเครื่อง
 `transactions` `budgets` `dismissed_alerts` `accounts` `recurring_rules` `saving_goals`
 และทุกตารางต้องขึ้น **RLS enabled**
 
-## 4. สร้าง bucket สำหรับใบเสร็จ
+## 4. bucket สำหรับใบเสร็จ
 
-`db push` สร้างตารางให้ แต่ storage bucket ต้องสร้างแยก:
+**ไม่ต้องทำอะไร** — migration `20260717090100_receipts_storage.sql` สร้าง bucket
+`receipts` (private, 5 MB, เฉพาะรูปกับ PDF) และ policy ให้ครบตอน `db push` แล้ว
 
-Dashboard → Storage → **New bucket**
-- ชื่อ: `receipts`
-- **Public bucket: ปิด** — ใบเสร็จเป็นข้อมูลส่วนตัว ถ้าเปิดจะเปิดให้ใครก็เข้าถึงไฟล์ได้
-  ด้วย URL ตรง ๆ โดยไม่ต้องล็อกอิน
-- File size limit: `5 MB`
-- Allowed MIME types: `image/jpeg, image/png, image/webp, application/pdf`
-
-policy ของ bucket มาจาก migration `20260717...storage.sql` แล้ว ไม่ต้องตั้งในหน้าเว็บ
+ตรวจว่าได้จริง: Dashboard → Storage → ต้องเห็น `receipts` และ **ไม่มีป้าย Public**
 
 ## 5. ตั้งค่า Auth
 
@@ -54,9 +48,28 @@ Dashboard → Authentication → **URL Configuration**
 - **Site URL**: โดเมนจริงของคุณ (เช่น `https://rairap.vercel.app`)
 - **Redirect URLs**: เพิ่ม `https://<โดเมน>/**`
 
+ค่าเริ่มต้นคือ `http://localhost:3000` — **ถ้าไม่แก้ ลิงก์ยืนยันในอีเมลจะชี้กลับ
+เครื่อง localhost ของผู้ใช้เอง กดแล้วเปิดไม่ได้ = สมัครไม่สำเร็จสักคน**
+ตั้งได้หลัง deploy Vercel เสร็จ (ข้อ 7) แล้วค่อยกลับมาแก้
+
 Authentication → **Providers** → Email
 - **Confirm email: เปิด** — ถ้าปิด ใครก็สมัครด้วยอีเมลคนอื่นได้
 - Minimum password length: **8** (ให้ตรงกับ zod schema ในแอป)
+
+### ⚠️ SMTP — ตัวปิดกั้นการเปิดใช้จริง
+
+Supabase ให้ SMTP ในตัวมาเพื่อ**ทดสอบเท่านั้น** จำกัด `rate_limit_email_sent`
+ไว้ที่ **2 ฉบับ/ชั่วโมง ทั้ง project** ไม่ใช่ต่อคน แปลว่า:
+
+- คนที่ 3 ที่สมัครในชั่วโมงนั้น **สมัครไม่ได้** ได้ error `email rate limit exceeded`
+- ลืมรหัสผ่านก็กินโควตาเดียวกัน
+- ไม่มี captcha → บอทยิงสมัครรัว ๆ ทำให้คนจริงสมัครไม่ได้ทั้งวัน
+
+ก่อนเปิดให้คนใช้ต้องต่อ SMTP ของตัวเอง: Authentication → **SMTP Settings**
+ใช้ Resend / SendGrid / Amazon SES (free tier พอสำหรับเริ่มต้นทั้งหมด)
+แล้วขยับ `rate_limit_email_sent` ขึ้นตามที่ผู้ให้บริการรองรับ
+
+พิจารณาเปิด **captcha** (Authentication → Attack Protection) ด้วย ถ้าเปิดสาธารณะ
 
 ## 6. ต่อแอปเข้ากับ cloud
 
@@ -106,6 +119,18 @@ npx vercel --prod
 - [ ] แนบใบเสร็จ → เปิดดูได้ → ลองเอา URL ไปเปิดในหน้าต่างที่ไม่ได้ล็อกอิน **ต้องเปิดไม่ได้**
 - [ ] ส่งออก CSV ได้
 - [ ] Dashboard → Advisors → **Security Advisor** ต้องไม่มี warning ค้าง
+- [ ] ต่อ SMTP ของตัวเองแล้ว (ไม่งั้นสมัครได้ 2 คน/ชั่วโมง)
+- [ ] Site URL ชี้โดเมนจริง ไม่ใช่ localhost
+
+ตรวจอัตโนมัติได้ด้วย:
+
+```bash
+node scripts/verify-cloud.mjs
+```
+
+ยิงผ่าน publishable key เหมือนที่เบราว์เซอร์ทำ ตรวจว่า anon เข้าไม่ถึง, 2 บัญชี
+มองไม่เห็นกัน, ใบเสร็จข้ามคนไม่ได้ แล้วลบบัญชีทดสอบทิ้ง
+**ต้องต่อ SMTP ก่อน** ไม่งั้นติด rate limit ตอนสมัคร
 
 `npm run gate` **รันกับ cloud ไม่ได้** — มันสร้างผู้ใช้ทิ้งและลบ transactions ด้วย
 service_role `scripts/local-only.mjs` จึงบล็อกไว้ตั้งใจ ห้ามถอดการ์ดเพื่อรันกับ project จริง
