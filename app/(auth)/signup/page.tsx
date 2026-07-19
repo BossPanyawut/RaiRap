@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Turnstile } from "@/components/turnstile";
 import { useLocale } from "@/components/locale-provider";
 
 export default function SignUpPage() {
@@ -47,11 +48,24 @@ export default function SignUpPage() {
             required
           />
 
+          <Turnstile />
+
           {state?.error && <Alert>{state.error}</Alert>}
 
           <Button type="submit" disabled={pending} className="mt-2">
             {pending ? t("กำลังสมัคร", "Creating account") : t("สมัครใช้งาน", "Create account")}
           </Button>
+
+          <p className="text-text-muted text-sm">
+            {t("การสมัครถือว่ายอมรับ", "By creating an account you accept the")}{" "}
+            <Link href="/terms" className="text-link underline">
+              {t("เงื่อนไขการใช้งาน", "terms of service")}
+            </Link>{" "}
+            {t("และ", "and the")}{" "}
+            <Link href="/privacy" className="text-link underline">
+              {t("นโยบายความเป็นส่วนตัว", "privacy policy")}
+            </Link>
+          </p>
         </form>
 
         <p className="text-text-muted mt-6 text-[15px]">

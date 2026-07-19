@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { SESSION_ONLY_COOKIE } from "@/lib/auth-cookies";
+import { captchaToken } from "@/lib/captcha";
 import { getI18n } from "@/lib/i18n-server";
 
 const credentials = z.object({
@@ -16,6 +17,17 @@ const credentials = z.object({
 const signUpInput = credentials.extend({
   displayName: z.string().min(1, "ใส่ชื่อที่อยากให้เรียก"),
 });
+
+/**
+ * ปลายทางหลังล็อกอิน — รับเฉพาะ path ภายในแอปเท่านั้น
+ * ต้องขึ้นต้นด้วย / ตัวเดียว: "//evil.com" และ "/\evil.com" เป็น URL
+ * แบบ protocol-relative ที่เบราว์เซอร์พาออกนอกโดเมนได้ = open redirect
+ * ค่าที่ไม่ผ่านเงื่อนไขทั้งหมดตกกลับหน้าแรก ไม่ error
+ */
+function safeNextPath(formData: FormData): string {
+  const next = formData.get("next");
+  return typeof next === "string" && /^\/(?![/\\])/.test(next) ? next : "/";
+}
 
 export type AuthState = { error: string } | null;
 
@@ -34,7 +46,10 @@ export async function signIn(
 
   const rememberMe = formData.get("rememberMe") === "on";
   const supabase = await createClient({ sessionOnly: !rememberMe });
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword({
+    ...parsed.data,
+    options: { captchaToken: captchaToken(formData) },
+  });
 
   // ไม่บอกว่าอีเมลมีอยู่จริงไหม — กันการไล่เดาว่าใครสมัครไว้บ้าง
   if (error) return { error: t("อีเมลหรือรหัสผ่านไม่ถูกต้อง", "Email or password is incorrect") };
@@ -51,7 +66,7 @@ export async function signIn(
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(safeNextPath(formData));
 }
 
 export async function signUp(
@@ -72,10 +87,22 @@ export async function signUp(
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { data: { display_name: parsed.data.displayName } },
+    options: {
+      data: { display_name: parsed.data.displayName },
+      captchaToken: captchaToken(formData),
+    },
   });
 
-  if (error) return { error: t(error.message, "Could not create the account. Try again.") };
+  // ไม่ส่ง error.message ดิบของ Supabase กลับไป — มันเป็นภาษาอังกฤษล้วน
+  // และบางข้อความยืนยันว่าอีเมลไหนมีบัญชีอยู่แล้ว (account enumeration)
+  if (error) {
+    return {
+      error: t(
+        "สมัครด้วยอีเมลนี้ไม่ได้ ลองเข้าสู่ระบบ หรือใช้อีเมลอื่น",
+        "Could not sign up with this email. Try signing in, or use another email.",
+      ),
+    };
+  }
 
   revalidatePath("/", "layout");
   redirect("/");

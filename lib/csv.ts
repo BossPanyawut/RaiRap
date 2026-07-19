@@ -12,11 +12,31 @@ export const CSV_HEADERS = [
 export const CSV_HEADERS_EN = ["Date", "Type", "Category", "Amount", "Note"] as const;
 
 /**
+ * กัน CSV formula injection — Excel/Sheets ตีความเซลล์ที่ขึ้นต้นด้วย = + - @
+ * (รวมถึงตามหลัง tab/CR) เป็นสูตร ชื่อหมวดหรือบันทึกย่อที่ผู้ใช้พิมพ์เองอย่าง
+ * "=HYPERLINK(...)" จะกลายเป็นโค้ดที่รันตอนคนเปิดไฟล์ มาตรฐาน (OWASP) คือ
+ * นำหน้าด้วย ' ซึ่ง Excel ถือเป็นเครื่องหมาย "ข้อความล้วน" และไม่แสดงผล
+ * ฝั่ง parseCSV ถอด ' ตัวนี้กลับ ทำให้ export → import ได้ข้อมูลเดิมเป๊ะ
+ */
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+function guardFormula(v: string): string {
+  return FORMULA_PREFIX.test(v) ? `'${v}` : v;
+}
+
+/**
  * ครอบค่าที่มี , " หรือขึ้นบรรทัดใหม่ ตาม RFC 4180
  * ถ้าไม่ครอบ บันทึกย่อที่มีลูกน้ำ (เช่น "ข้าว, น้ำ") จะดันคอลัมน์เพี้ยนทั้งแถว
  */
 function escapeCell(v: string): string {
-  return /[",\n\r]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
+  const guarded = guardFormula(v);
+  return /[",\n\r]/.test(guarded) ? `"${guarded.replaceAll('"', '""')}"` : guarded;
+}
+
+/** คู่ตรงข้ามของ guardFormula — ใช้ตอน import เพื่อให้ไป-กลับแล้วข้อมูลไม่เปลี่ยน
+ *  ถอดเฉพาะ ' ที่ตามด้วยอักขระสูตรเท่านั้น ข้อความปกติที่ขึ้นต้นด้วย ' ไม่ถูกแตะ */
+function unguardFormula(v: string): string {
+  return v.startsWith("'") && FORMULA_PREFIX.test(v.slice(1)) ? v.slice(1) : v;
 }
 
 export type ExportRow = {
@@ -162,9 +182,9 @@ export function parseCSV(text: string, locale: Locale = "th"): ParseResult {
       line: n,
       occurred_on: date,
       kind,
-      category,
+      category: unguardFormula(category),
       amount: Math.round(amount * 100) / 100,
-      note: note || null,
+      note: unguardFormula(note ?? "") || null,
     });
   }
 

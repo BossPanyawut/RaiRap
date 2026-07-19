@@ -51,7 +51,13 @@ npm run seed:demo      # demo@rairap.dev / demo1234
   ห้ามคลิกใน Dashboard จะถูก push ทับ. `config push` ดันทั้งไฟล์ ไม่ใช่แค่ `[auth]`
 - **ตอนนี้ `enable_confirmations = false`** ใครก็สมัครด้วยอีเมลคนอื่นได้ —
   ชั่วคราวจนกว่าจะต่อ SMTP (SMTP ในตัวจำกัด 2 ฉบับ/ชั่วโมง ยกเพดานไม่ได้)
+  บล็อก Resend + Turnstile เตรียมไว้ใน config.toml แล้ว เหลือแค่ key — ดู deploy.md §5
 - **`getUser()` ไม่ใช่ `getSession()` ฝั่ง server** getSession อ่าน cookie ดิบโดยไม่ตรวจลายเซ็น
+- **Security headers อยู่ใน `next.config.ts` ห้ามถอด** CSP/nosniff/HSTS ฯลฯ — gate:a11y เช็คทุกตัว
+- **`?next=` หลัง login ต้องผ่าน `safeNextPath()`** ห้าม redirect ค่าดิบ — `//evil.com` คือ open redirect
+- **เซลล์ CSV ที่ขึ้นต้น `= + - @` ต้องผ่าน `guardFormula`** (lib/csv.ts) ไม่งั้นเป็นสูตรที่รันตอนผู้ใช้เปิดใน Excel — import ถอด `'` กลับให้ ไป-กลับข้อมูลไม่เปลี่ยน
+- **error ของ login/signup เป็น generic เสมอ** ห้ามส่ง error.message ดิบของ Supabase — มันยืนยันว่าอีเมลไหนมีบัญชี
+- ภาพรวม threat model + ความเสี่ยงคงเหลือ + วิธี rotate key อยู่ใน **`docs/security.md`**
 
 ### Next 16
 
@@ -129,7 +135,7 @@ npm run seed:demo      # demo@rairap.dev / demo1234
 ## Gate
 
 ```bash
-npm run gate        # 143 ข้อ — ต้องมี supabase + dev server รันอยู่
+npm run gate        # 225 ข้อ — ต้องมี supabase + dev server รันอยู่
 ```
 
 | คำสั่ง | ครอบอะไร |
@@ -139,7 +145,7 @@ npm run gate        # 143 ข้อ — ต้องมี supabase + dev server
 | `gate:settings` | รอบเดือนเทียบกับ Postgres · constraint · RLS ของ dismissed_alerts · ล้างข้อมูลข้าม user · CSV ไป-กลับ · ลบบัญชี |
 | `gate:extras` | รายการเกิดซ้ำ idempotent + เลขงวด · ยอดแยกบัญชี · storage ข้าม user (อัป/โหลด/list/ลบ) |
 | `gate:e2e` | ยอดเงินตรงผลรวมมือ · ขอบ 79/80/101% · JS ↔ Postgres ไม่ drift · กราฟ |
-| `gate:a11y` | axe-core ทั้ง light/dark ทุกหน้า · 360px · focus ring · reduced-motion |
+| `gate:a11y` | axe-core ทั้ง light/dark ทุกหน้า (รวม landing/terms/privacy) · 360px · focus ring · reduced-motion · คนไม่ล็อกอินเปิด / ต้องได้ landing |
 
 **gate script ลบข้อมูลด้วย service_role** `scripts/local-only.mjs` บังคับให้ชี้ localhost เท่านั้น
 ห้ามถอดการ์ดนี้
@@ -150,7 +156,8 @@ npm run gate        # 143 ข้อ — ต้องมี supabase + dev server
 ## โครงสร้าง
 
 ```
-app/(auth)/          login, signup, actions
+app/(auth)/          login, signup, actions — ฟอร์มมี Turnstile รอ env (components/turnstile.tsx)
+app/(marketing)/     welcome (landing) · terms · privacy — สาธารณะ ไม่ต้องล็อกอิน
 app/(app)/           หน้าที่ต้องล็อกอิน — layout.tsx เป็นด่านสุดท้ายหลัง proxy
   settings/          actions.ts · import-actions.ts · export/route.ts
 lib/

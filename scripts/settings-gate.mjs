@@ -175,6 +175,41 @@ console.log("\n--- CSV ---");
   check("หัวตารางผิดในโหมดอังกฤษ → แจ้งเป็นอังกฤษ", rEN.errors[0]?.startsWith("The header does not match"));
 }
 
+// ═══════════ CSV formula injection ═══════════
+// เซลล์ที่ขึ้นต้นด้วย = + - @ คือสูตรในสายตา Excel/Sheets — ไฟล์ export
+// ต้องนำหน้าด้วย ' (OWASP) และ import ต้องถอดกลับให้ข้อมูลเดิมเป๊ะ
+{
+  const rows = [
+    { occurred_on: "2026-07-01", kind: "expense", category: "=HYPERLINK(\"http://evil\",\"อาหาร\")", amount: 100, note: "@SUM(A1:A9)" },
+    { occurred_on: "2026-07-02", kind: "expense", category: "อาหาร", amount: 50, note: "-เผื่อฉุกเฉิน +ค่าส่ง" },
+  ];
+  const csv = toCSV(rows);
+  const lines = csv.replace(/^﻿/, "").split("\r\n");
+  check(
+    "เซลล์สูตรถูกนำหน้าด้วย ' ตอน export",
+    lines[1].includes("\"'=HYPERLINK") && lines[1].includes("'@SUM"),
+    lines[1],
+  );
+  check(
+    "บันทึกย่อขึ้นต้นด้วย - ก็ถูกกันด้วย (Excel ตีความเป็นสูตรเหมือนกัน)",
+    lines[2].includes("'-เผื่อฉุกเฉิน"),
+    lines[2],
+  );
+  const back = parseCSV(csv);
+  check(
+    "ไป-กลับแล้วข้อมูลกลับเป็นค่าเดิม ไม่มี ' ติดมา",
+    back.errors.length === 0 &&
+      back.rows[0].category === rows[0].category &&
+      back.rows[0].note === rows[0].note &&
+      back.rows[1].note === rows[1].note,
+    JSON.stringify({ cat: back.rows[0]?.category, note: back.rows[0]?.note }),
+  );
+  // ไฟล์จากแอปอื่นที่มีสูตรดิบ ๆ — นำเข้าได้ เก็บเป็นข้อความตามที่เห็น
+  const foreign = parseCSV("วันที่,ประเภท,หมวดหมู่,จำนวนเงิน,บันทึกย่อ\n2026-07-01,รายจ่าย,อาหาร,10,=1+2");
+  check("สูตรดิบจากไฟล์นอกถูกเก็บเป็นข้อความ ไม่ระเบิด", foreign.rows[0]?.note === "=1+2",
+    JSON.stringify(foreign.rows[0]?.note));
+}
+
 // ═══════════ ลบบัญชี ═══════════
 console.log("\n--- ลบบัญชี ---");
 {

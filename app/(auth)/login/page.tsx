@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { signIn } from "../actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Turnstile } from "@/components/turnstile";
 import { useLocale } from "@/components/locale-provider";
 
 export default function LoginPage() {
   const { t } = useLocale();
   const [state, action, pending] = useActionState(signIn, null);
+  // path ที่ proxy แนบมาตอนเด้งเข้า login — ฝั่ง action ตรวจอีกชั้นว่าเป็น
+  // path ภายในจริงก่อน redirect (safeNextPath) ค่าปลอมจากคนแก้ URL จึงไม่มีผล
+  const nextPath = useSearchParams().get("next") ?? "/";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center p-4">
@@ -22,6 +27,7 @@ export default function LoginPage() {
         </p>
 
         <form action={action} className="mt-6 flex flex-col gap-4">
+          <input type="hidden" name="next" value={nextPath} />
           <Field
             id="email"
             name="email"
@@ -47,6 +53,8 @@ export default function LoginPage() {
             />
             <span>{t("จดจำฉัน", "Remember me")}</span>
           </label>
+
+          <Turnstile />
 
           {state?.error && <Alert>{state.error}</Alert>}
 

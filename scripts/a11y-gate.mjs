@@ -54,12 +54,15 @@ const PAGES = [
   "/budgets", "/goals", "/analytics", "/profile", "/report", "/accounts", "/recurring", "/categories", "/settings",
 ];
 
+// หน้าสาธารณะไม่มี bottom navigation ของแอป จึงเช็คแค่ axe + ไม่ล้นแนวนอน
+const PUBLIC_PAGES = ["/welcome", "/terms", "/privacy"];
+
 for (const theme of ["light", "dark"]) {
   console.log(`\n--- axe-core (wcag2a + wcag2aa) — โหมด${theme === "light" ? "สว่าง" : "มืด"} ---`);
   await page.context().addCookies([
     { name: "rairap-theme", value: theme, url: APP },
   ]);
-  for (const path of PAGES) {
+  for (const path of [...PAGES, ...PUBLIC_PAGES]) {
     await page.goto(APP + path, { waitUntil: "networkidle" });
     await page.waitForTimeout(600);
     const applied = await page.evaluate(() => document.documentElement.dataset.theme);
@@ -316,6 +319,18 @@ for (const path of PAGES) {
     `content=${Math.round(spacing.contentBottom)} nav=${Math.round(spacing.navTop)}`,
   );
 }
+for (const path of PUBLIC_PAGES) {
+  await m.goto(APP + path, { waitUntil: "networkidle" });
+  await m.waitForTimeout(500);
+  const o = await m.evaluate(() => {
+    const de = document.documentElement;
+    const wide = [...document.querySelectorAll("*")]
+      .filter((e) => e.getBoundingClientRect().right > de.clientWidth + 1)
+      .map((e) => e.tagName + "." + String(e.className).slice(0, 40));
+    return { overflow: de.scrollWidth > de.clientWidth, scrollW: de.scrollWidth, wide: wide.slice(0, 3) };
+  });
+  check(`360px ${path}`, !o.overflow, o.overflow ? `scrollW=${o.scrollW} ${o.wide.join(" | ")}` : "พอดีจอ");
+}
 {
   const smallFields = await m.evaluate(() =>
     [...document.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), select, textarea')]
@@ -350,6 +365,71 @@ await page.goto(APP + "/", { waitUntil: "networkidle" });
   });
   check("Tab แรกมี focus ring มองเห็น", f.outline.includes("2px") && !f.outline.includes("none"),
     `${f.tag} → ${f.outline}`);
+}
+
+console.log("\n--- หน้าสาธารณะ ---");
+{
+  // คนแปลกหน้าเปิดหน้าแรกต้องเจอ landing ไม่ใช่ฟอร์ม login
+  // ส่วน path ลึกต้องยังเด้งไป login พร้อม next เหมือนเดิม
+  const anon = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await anon.goto(APP + "/", { waitUntil: "networkidle" });
+  check("ไม่ล็อกอินเปิด / แล้วได้ landing", new URL(anon.url()).pathname === "/welcome", anon.url());
+  await anon.goto(APP + "/budgets", { waitUntil: "networkidle" });
+  const login = new URL(anon.url());
+  check(
+    "ไม่ล็อกอินเปิด /budgets ยังเด้งไป login พร้อม next",
+    login.pathname === "/login" && login.searchParams.get("next") === "/budgets",
+    anon.url(),
+  );
+  const signupLinks = await anon.goto(APP + "/signup", { waitUntil: "networkidle" }).then(() =>
+    anon.evaluate(() =>
+      ["/terms", "/privacy"].map((href) => Boolean(document.querySelector(`a[href="${href}"]`))),
+    ),
+  );
+  check("หน้า signup ลิงก์ไป terms + privacy", signupLinks.every(Boolean), signupLinks.join(", "));
+
+  // open redirect — ?next= ที่ชี้ออกนอกโดเมนต้องถูกทิ้ง ตกกลับหน้าแรก
+  // "//evil.com" คือ URL แบบ protocol-relative ที่ผ่านการเช็ค startsWith("/") ทั่วไป
+  await anon.goto(APP + "/login?next=//evil.com/", { waitUntil: "networkidle" });
+  await anon.fill("#email", email);
+  await anon.fill("#password", PW);
+  await anon.click("button[type=submit]");
+  await anon.waitForURL((u) => u.pathname !== "/login", { timeout: 20000 });
+  const landed = new URL(anon.url());
+  check(
+    "next=//evil.com ถูกทิ้ง ไม่พาออกนอกโดเมน",
+    landed.origin === new URL(APP).origin && landed.pathname === "/",
+    anon.url(),
+  );
+  await anon.close();
+
+  // ส่วน next ที่เป็น path ภายในจริงต้องยังทำงาน — เด้งกลับหน้าที่ตั้งใจไป
+  const anon2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await anon2.goto(APP + "/login?next=/budgets", { waitUntil: "networkidle" });
+  await anon2.fill("#email", email);
+  await anon2.fill("#password", PW);
+  await anon2.click("button[type=submit]");
+  await anon2.waitForURL(APP + "/budgets", { timeout: 20000 });
+  check("next=/budgets พาไปหน้าที่ตั้งใจหลังล็อกอิน", true, anon2.url());
+  await anon2.close();
+}
+
+console.log("\n--- security headers ---");
+{
+  const res = await fetch(APP + "/welcome");
+  const h = (name) => res.headers.get(name) ?? "";
+  const csp = h("content-security-policy");
+  check("มี Content-Security-Policy", csp.length > 0);
+  check(
+    "CSP ปิดทางฝัง iframe + object + base + form ออกนอก",
+    csp.includes("frame-ancestors 'none'") && csp.includes("object-src 'none'")
+      && csp.includes("base-uri 'self'") && csp.includes("form-action 'self'"),
+    csp.slice(0, 120),
+  );
+  check("X-Content-Type-Options: nosniff", h("x-content-type-options") === "nosniff", h("x-content-type-options"));
+  check("Referrer-Policy จำกัดการรั่วของ URL", h("referrer-policy") === "strict-origin-when-cross-origin", h("referrer-policy"));
+  check("Permissions-Policy ปิด API ที่ไม่ใช้", h("permissions-policy").includes("camera=()"), h("permissions-policy"));
+  check("HSTS พร้อมสำหรับ production", h("strict-transport-security").includes("max-age="), h("strict-transport-security"));
 }
 
 console.log("\n--- prefers-reduced-motion ---");
