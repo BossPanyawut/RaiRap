@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { GlassCard } from "@/components/ui/glass-card";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import { Turnstile } from "@/components/turnstile";
 import { useLocale } from "@/components/locale-provider";
 
@@ -67,6 +68,10 @@ export default function SignUpPage() {
             </Link>
           </p>
         </form>
+
+        <div className="mt-5">
+          <OAuthButtons nextPath="/" />
+        </div>
 
         <p className="text-text-muted mt-6 text-[15px]">
           {t("มีบัญชีแล้ว", "Already have an account?")}{" "}

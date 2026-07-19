@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { SESSION_ONLY_COOKIE } from "@/lib/auth-cookies";
@@ -106,6 +106,39 @@ export async function signUp(
 
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+/**
+ * Login ด้วย OAuth (PKCE flow ฝั่ง server) — signInWithOAuth คืน URL ของหน้า
+ * ยินยอมของ provider แล้วเราพาผู้ใช้ไปเอง กลับมาที่ /auth/callback พร้อม code
+ * ให้แลกเป็น session (app/auth/callback/route.ts)
+ *
+ * redirectTo ต้องอยู่ใน additional_redirect_urls ของ supabase/config.toml
+ * ค่า host ที่อ่านจาก header ปลอมได้ แต่ค่าปลอมไม่อยู่ใน allowlist ของ Supabase
+ * จึงตกกลับ site_url ไม่ใช่โดเมนของคนปลอม
+ */
+export async function signInWithProvider(formData: FormData) {
+  const raw = formData.get("provider");
+  const provider = raw === "google" || raw === "facebook" ? raw : null;
+  if (!provider) redirect("/login");
+
+  const next = safeNextPath(formData);
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const origin = `${proto}://${host}`;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+
+  // ไม่ส่งรายละเอียด error ของ provider กลับไป — หน้า login แสดงข้อความ generic
+  if (error || !data.url) redirect("/login?error=oauth");
+  redirect(data.url);
 }
 
 export async function signOut() {

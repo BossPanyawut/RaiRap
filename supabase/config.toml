@@ -163,7 +163,7 @@ enabled = true
 # ไฟล์นี้ถูก `supabase config push` ดันขึ้น cloud ทั้งบล็อก [auth] ค่าตรงนี้จึงต้อง
 # เป็นของ production ไม่ใช่ของเครื่อง ไม่งั้น push แล้วลิงก์ยืนยันในอีเมลจะชี้กลับ
 # localhost ของผู้ใช้เอง — local dev ยังทำงานได้เพราะ localhost อยู่ใน
-# additional_redirect_urls ข้างล่าง และแอปนี้ใช้แค่ email+password ไม่มี OAuth redirect
+# additional_redirect_urls ข้างล่าง (รวม /auth/callback ของ OAuth login ด้วย)
 site_url = "https://rairap.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
@@ -378,6 +378,29 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+# ── Google / Facebook login — โค้ดฝั่งแอปพร้อมแล้ว เหลือแค่ key ──
+# ปุ่มอยู่ใน components/oauth-buttons.tsx → server action signInWithProvider
+# → /auth/callback แลก code เป็น session การเปิดใช้ต่อ provider = 3 ขั้น ครบทุกขั้น:
+#   1. สร้าง OAuth app
+#      Google:   https://console.cloud.google.com/apis/credentials (OAuth client, Web)
+#      Facebook: https://developers.facebook.com/apps (เพิ่มผลิตภัณฑ์ Facebook Login)
+#      Authorized redirect URI ต้องเป็นของ Supabase ไม่ใช่ของแอป:
+#        cloud: https://<project-ref>.supabase.co/auth/v1/callback
+#        local: http://127.0.0.1:54321/auth/v1/callback
+#   2. ตั้ง env 2 ตัวของ provider นั้น (ในเครื่อง: shell ก่อน `supabase start`)
+#   3. `npx supabase config push` พร้อม env เดียวกัน (ดู docs/deploy.md)
+# env ไม่ตั้ง = ค่าเป็นสตริงว่าง ปุ่มโชว์แต่ล็อกอินไม่ผ่าน จนกว่าจะครบ 3 ขั้น
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+[auth.external.facebook]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_FACEBOOK_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_FACEBOOK_SECRET)"
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

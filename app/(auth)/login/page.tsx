@@ -8,15 +8,19 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { GlassCard } from "@/components/ui/glass-card";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import { Turnstile } from "@/components/turnstile";
 import { useLocale } from "@/components/locale-provider";
 
 export default function LoginPage() {
   const { t } = useLocale();
   const [state, action, pending] = useActionState(signIn, null);
+  const searchParams = useSearchParams();
   // path ที่ proxy แนบมาตอนเด้งเข้า login — ฝั่ง action ตรวจอีกชั้นว่าเป็น
   // path ภายในจริงก่อน redirect (safeNextPath) ค่าปลอมจากคนแก้ URL จึงไม่มีผล
-  const nextPath = useSearchParams().get("next") ?? "/";
+  const nextPath = searchParams.get("next") ?? "/";
+  // OAuth ล้มเหลว (ผู้ใช้กดยกเลิก / code หมดอายุ) — ข้อความ generic เสมอ
+  const oauthError = searchParams.get("error") === "oauth";
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center p-4">
@@ -57,11 +61,23 @@ export default function LoginPage() {
           <Turnstile />
 
           {state?.error && <Alert>{state.error}</Alert>}
+          {!state?.error && oauthError && (
+            <Alert>
+              {t(
+                "เข้าสู่ระบบด้วยบัญชีภายนอกไม่สำเร็จ ลองอีกครั้ง",
+                "Could not sign in with that account. Try again.",
+              )}
+            </Alert>
+          )}
 
           <Button type="submit" disabled={pending} className="mt-2">
             {pending ? t("กำลังเข้าสู่ระบบ", "Signing in") : t("เข้าสู่ระบบ", "Sign in")}
           </Button>
         </form>
+
+        <div className="mt-5">
+          <OAuthButtons nextPath={nextPath} />
+        </div>
 
         <p className="text-text-muted mt-6 text-[15px]">
           {t("ยังไม่มีบัญชี", "No account yet?")}{" "}

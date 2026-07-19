@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
+import { MarketingPreferences } from "@/components/marketing-preferences";
 import { getI18n } from "@/lib/i18n-server";
+import { getTheme } from "@/lib/theme";
 
 /**
  * โครงหน้าสาธารณะ (landing, terms, privacy) — ไม่มี session ก็เข้าได้
@@ -9,7 +11,7 @@ import { getI18n } from "@/lib/i18n-server";
 export default async function MarketingLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const { t } = await getI18n();
+  const [{ t, locale }, theme] = await Promise.all([getI18n(), getTheme()]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -24,6 +26,7 @@ export default async function MarketingLayout({
           aria-label={t("เมนูหน้าแรก", "Landing navigation")}
           className="flex items-center gap-2"
         >
+          <MarketingPreferences theme={theme} locale={locale} />
           <ButtonLink href="/login" variant="secondary">
             {t("เข้าสู่ระบบ", "Sign in")}
           </ButtonLink>
