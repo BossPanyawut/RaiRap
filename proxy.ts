@@ -6,7 +6,14 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth-cookies";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth",
+  "/welcome",
+  "/terms",
+  "/privacy",
+];
 
 /**
  * Next 16 เปลี่ยนชื่อ Middleware → Proxy ไฟล์ต้องชื่อ proxy.ts และ export ชื่อ proxy
@@ -54,8 +61,15 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    // คนที่ยังไม่ล็อกอินเปิดหน้าแรก = คนแปลกหน้า → landing ไม่ใช่ฟอร์ม login
+    // path ลึกกว่านั้นคือคนที่ตั้งใจมา ให้ไป login แล้วเด้งกลับที่เดิม
+    if (pathname === "/") {
+      url.pathname = "/welcome";
+      url.search = "";
+    } else {
+      url.pathname = "/login";
+      url.searchParams.set("next", pathname);
+    }
     return NextResponse.redirect(url);
   }
 

@@ -81,11 +81,30 @@ Supabase ให้ SMTP ในตัวมาเพื่อ**ทดสอบเ
 `mailer_autoconfirm` ก็ไม่ช่วย เพราะตัวนับถูกเช็คแม้ไม่ได้ส่งอีเมลจริง
 Supabase ล็อกไว้ที่ชั้น platform
 
-ก่อนเปิดให้คนใช้ต้องต่อ SMTP ของตัวเอง: Authentication → **SMTP Settings**
-ใช้ Resend / SendGrid / Amazon SES (free tier พอสำหรับเริ่มต้นทั้งหมด)
-แล้วขยับ `rate_limit_email_sent` ขึ้นตามที่ผู้ให้บริการรองรับ
+ก่อนเปิดให้คนใช้ต้องต่อ SMTP ของตัวเอง — เลือก **Resend** ไว้แล้ว
+(free 3,000 ฉบับ/เดือน) บล็อก config เตรียมไว้ใน `supabase/config.toml` แล้ว:
 
-พิจารณาเปิด **captcha** (Authentication → Attack Protection) ด้วย ถ้าเปิดสาธารณะ
+1. สมัคร https://resend.com → **Domains** → เพิ่มโดเมนแล้วใส่ DNS record ตามที่บอก
+   (ระหว่างรอ verify ใช้ `onboarding@resend.dev` เป็นผู้ส่งทดสอบได้)
+2. **API Keys** → สร้าง key (สิทธิ์ Sending access พอ) — เก็บไว้ ห้าม commit
+3. ใน `supabase/config.toml`: เปิดบล็อก `[auth.email.smtp]`,
+   แก้ `admin_email` เป็นอีเมลบนโดเมนที่ verify แล้ว,
+   เปลี่ยน `enable_confirmations` เป็น `true`,
+   ขยับ `[auth.rate_limit] email_sent` จาก 2 → 100
+4. `RESEND_API_KEY=<key> npx supabase config push`
+5. ทดสอบทันที: สมัครบัญชีใหม่บนโดเมนจริง ต้องได้อีเมลยืนยันภายในไม่กี่วินาที
+
+ทั้งหมดนี้ต้องไปด้วยกันใน push เดียว — เปิด `enable_confirmations` โดยยังไม่ต่อ
+SMTP = สมัครได้ 2 คน/ชั่วโมงทั้งระบบ
+
+### Captcha — เปิดก่อนปล่อยสาธารณะ
+
+ไม่มี captcha บอทจะยิงสมัครจนโควตาอีเมลหมดและคนจริงสมัครไม่ได้
+โค้ดฝั่งแอปพร้อมแล้ว (`components/turnstile.tsx` + server action ส่ง token แล้ว)
+ขั้นตอนเปิดอยู่ในคอมเมนต์เหนือบล็อก `[auth.captcha]` ใน `supabase/config.toml` —
+สรุป: สร้าง site ใน Cloudflare Turnstile → ตั้ง `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+ใน Vercel + redeploy → เปิดบล็อกแล้ว `TURNSTILE_SECRET_KEY=<secret> npx supabase config push`
+**ต้องครบทั้งสองฝั่ง** เปิดฝั่งเดียว login จะพังหรือไม่ได้กันอะไรเลย
 
 ## 6. ต่อแอปเข้ากับ cloud
 
@@ -135,7 +154,11 @@ npx vercel --prod
 - [ ] แนบใบเสร็จ → เปิดดูได้ → ลองเอา URL ไปเปิดในหน้าต่างที่ไม่ได้ล็อกอิน **ต้องเปิดไม่ได้**
 - [ ] ส่งออก CSV ได้
 - [ ] Dashboard → Advisors → **Security Advisor** ต้องไม่มี warning ค้าง
-- [ ] ต่อ SMTP ของตัวเองแล้ว (ไม่งั้นสมัครได้ 2 คน/ชั่วโมง)
+- [ ] ต่อ Resend แล้ว + `enable_confirmations = true` (ไม่งั้นสมัครได้ 2 คน/ชั่วโมง
+      และใครก็สมัครด้วยอีเมลคนอื่นได้)
+- [ ] เปิด Turnstile ครบทั้งสองฝั่ง (Vercel env + config push)
+- [ ] ตั้ง secret ของ workflow backup แล้วรัน manual หนึ่งรอบ เขียว
+- [ ] เปิด `/welcome` `/terms` `/privacy` โดยไม่ล็อกอิน ต้องเข้าได้ทั้งสามหน้า
 - [ ] Site URL ชี้โดเมนจริง ไม่ใช่ localhost
 
 ตรวจอัตโนมัติได้ด้วย:
@@ -169,7 +192,24 @@ npx supabase db push                # แล้วค่อยส่งขึ้
 
 ## สำรองข้อมูล
 
-Free tier ไม่มี backup อัตโนมัติ ถ้ามีข้อมูลจริงแล้ว:
+Free tier ไม่มี backup อัตโนมัติ — repo นี้มี workflow สำรองรายวันให้แล้ว
+(`.github/workflows/db-backup.yml`) dump ตอน 03:00 เวลาไทย เข้ารหัสด้วย
+AES-256 แล้วเก็บเป็น artifact 30 วัน
+
+เปิดใช้: ตั้ง secret 2 ตัวที่ GitHub → Settings → Secrets and variables → Actions
+
+| Secret | ค่า |
+|---|---|
+| `SUPABASE_DB_URL` | connection string จาก Dashboard → Project Settings → Database |
+| `BACKUP_PASSPHRASE` | วลีลับยาว ๆ สำหรับเข้ารหัสไฟล์ — **เก็บไว้ให้ดี ไฟล์กู้ไม่ได้ถ้าลืม** |
+
+**ต้องเข้ารหัสเพราะ repo เป็น public** — artifact ของ public repo ใครก็โหลดได้
+dump เปล่า = ข้อมูลการเงินผู้ใช้ทุกคนหลุด
+
+ตั้งแล้วกด **Run workflow** (workflow_dispatch) หนึ่งรอบเพื่อยืนยันว่าเขียว
+วิธีกู้คืนอยู่ในคอมเมนต์หัวไฟล์ workflow
+
+สำรองมือเมื่อไหร่ก็ได้:
 
 ```bash
 npx supabase db dump -f backup-$(date +%F).sql --linked

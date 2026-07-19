@@ -210,6 +210,8 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
+# 2 คือเพดานบังคับของ SMTP ในตัว — ตั้งสูงกว่านี้ไม่ได้จนกว่า [auth.email.smtp]
+# จะเปิด เมื่อต่อ Resend แล้วให้ขยับเป็น 100 (โควตา free ของ Resend = 3,000/เดือน)
 email_sent = 2
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
@@ -225,10 +227,19 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
+#
+# ── Cloudflare Turnstile — โค้ดฝั่งแอปพร้อมแล้ว เหลือแค่ key ──
+# widget อยู่ใน components/turnstile.tsx และ server action ส่ง token ให้
+# Supabase แล้ว (app/(auth)/actions.ts) การเปิดใช้ = 3 ขั้น ต้องครบทุกขั้น:
+#   1. สร้าง site ที่ https://dash.cloudflare.com → Turnstile ได้ Site Key + Secret Key
+#   2. ตั้ง NEXT_PUBLIC_TURNSTILE_SITE_KEY ใน env ของ Vercel แล้ว redeploy
+#   3. เปิดบล็อกข้างล่าง แล้ว TURNSTILE_SECRET_KEY=<secret> npx supabase config push
+# เปิดแค่ข้อ 3 โดยไม่มีข้อ 2 = login/signup พังทุกคน (server รอ token ที่ไม่มีใครส่ง)
+# เปิดแค่ข้อ 2 โดยไม่มีข้อ 3 = widget โชว์แต่ไม่มีใครตรวจ = ไม่ได้กันอะไร
 # [auth.captcha]
 # enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# provider = "turnstile"
+# secret = "env(TURNSTILE_SECRET_KEY)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -245,7 +256,8 @@ double_confirm_changes = true
 # ⚠️ ราคาที่จ่าย: ใครก็สมัครด้วยอีเมลของคนอื่นได้ ไม่มีการพิสูจน์ความเป็นเจ้าของ
 # เจ้าของอีเมลตัวจริงมาทวงบัญชีคืนไม่ได้ และรีเซ็ตรหัสผ่านก็ส่งไปหาเจ้าของจริง
 # ซึ่งไม่ใช่คนที่ถือบัญชีอยู่
-# → ก่อนเปิดให้คนนอกใช้: ต่อ SMTP (Authentication → SMTP Settings) แล้วกลับเป็น true
+# → ก่อนเปิดให้คนนอกใช้: เปิดบล็อก [auth.email.smtp] (Resend) ข้างล่าง
+#   แล้วเปลี่ยนค่านี้เป็น true พร้อมกันใน push เดียว — ขั้นตอนเต็มใน docs/deploy.md §5
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 # แอปตรวจรหัสเดิมเองอยู่แล้วใน settings/actions.ts (changePassword/changeEmail)
@@ -258,14 +270,23 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
+#
+# ── Resend — ตัวปลดล็อกให้เปิด enable_confirmations กลับได้ ──
+# ขั้นตอน (เต็มอยู่ใน docs/deploy.md §5):
+#   1. สมัคร https://resend.com (free 3,000 ฉบับ/เดือน) → verify โดเมน
+#      (หรือใช้ onboarding@resend.dev ทดสอบก่อนได้) → สร้าง API key
+#   2. แก้ admin_email ข้างล่างเป็นอีเมลบนโดเมนที่ verify แล้ว
+#   3. เปิดบล็อกนี้ + เปลี่ยน enable_confirmations เป็น true +
+#      ขยับ [auth.rate_limit] email_sent จาก 2 → 100
+#   4. RESEND_API_KEY=<key> npx supabase config push
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
+# host = "smtp.resend.com"
 # port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "no-reply@<โดเมนที่ verify กับ Resend>"
+# sender_name = "RaiRap"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

@@ -1,0 +1,53 @@
+# สำรองฐานข้อมูล Supabase cloud รายวัน — อุดช่องที่ free tier ไม่มี backup อัตโนมัติ
+#
+# ต้องตั้ง secret สองตัวที่ Settings → Secrets and variables → Actions:
+#   SUPABASE_DB_URL     connection string จาก Dashboard → Project Settings → Database
+#                       (ใช้แบบ Session pooler ถ้า runner ต่อ IPv6 ตรงไม่ได้)
+#   BACKUP_PASSPHRASE   วลีลับสำหรับเข้ารหัสไฟล์ — repo นี้เป็น public ทำให้ artifact
+#                       โหลดได้โดยคนทั่วไป จึงห้ามอัปโหลด dump เปล่าเด็ดขาด
+#
+# กู้คืน: ดาวน์โหลด artifact แล้ว
+#   openssl enc -d -aes-256-cbc -pbkdf2 -in backup.sql.enc -out backup.sql \
+#     -pass "pass:<BACKUP_PASSPHRASE>"
+#   psql "$SUPABASE_DB_URL" -f backup.sql
+name: db-backup
+
+on:
+  schedule:
+    # 20:00 UTC = 03:00 เวลาไทย — ช่วงคนใช้น้อยสุด
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # ผ่าน CLI ไม่ใช่ pg_dump ตรง ๆ — CLI เลือกเวอร์ชัน pg_dump ให้ตรงกับ
+      # Postgres 17 ของ project เอง (pg_dump เก่ากว่า server จะ error ทันที)
+      - name: Dump database
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backup.sql
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Encrypt dump
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -in backup.sql -out backup.sql.enc \
+            -pass env:BACKUP_PASSPHRASE
+          rm backup.sql
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup.sql.enc
+          retention-days: 30
+          if-no-files-found: error
