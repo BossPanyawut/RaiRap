@@ -6,10 +6,13 @@ import {
   updateTransaction,
   type FormState,
 } from "@/app/(app)/transactions/actions";
+import { AmountCalculatorField } from "@/components/amount-calculator-field";
+import { useLocale } from "@/components/locale-provider";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { localizeDefaultName } from "@/lib/locale";
 
 export type CategoryOption = { id: string; name: string; kind: "income" | "expense" };
 export type AccountOption = { id: string; name: string };
@@ -36,6 +39,7 @@ export function TransactionForm({
   editing?: EditingTransaction;
   onDone?: () => void;
 }) {
+  const { locale, t } = useLocale();
   const [state, action, pending] = useActionState<FormState, FormData>(
     editing ? updateTransaction : createTransaction,
     null,
@@ -49,10 +53,10 @@ export function TransactionForm({
 
   useEffect(() => {
     if (state && "ok" in state) {
-      if (editing) onDone?.();
-      else formRef.current?.reset();
+      formRef.current?.reset();
+      onDone?.();
     }
-  }, [state, editing, onDone]);
+  }, [state, onDone]);
 
   const options = categories.filter((c) => c.kind === kind);
 
@@ -61,7 +65,7 @@ export function TransactionForm({
       {editing && <input type="hidden" name="id" value={editing.id} />}
 
       <fieldset className="flex gap-2">
-        <legend className="sr-only">ประเภทรายการ</legend>
+        <legend className="sr-only">{t("ประเภทรายการ", "Transaction type")}</legend>
         {(["expense", "income"] as const).map((k) => (
           <button
             key={k}
@@ -75,38 +79,27 @@ export function TransactionForm({
                 : "border-glass-border text-text-muted border bg-input hover:bg-hover",
             )}
           >
-            {k === "expense" ? "รายจ่าย" : "รายรับ"}
+            {k === "expense" ? t("รายจ่าย", "Expense") : t("รายรับ", "Income")}
           </button>
         ))}
       </fieldset>
 
-      <Field
-        id="amount"
-        name="amount"
-        label="จำนวนเงิน"
-        type="number"
-        inputMode="decimal"
-        step="0.01"
-        min="0.01"
-        defaultValue={editing?.amount}
-        className="money text-2xl"
-        required
-      />
+      <AmountCalculatorField id="amount" defaultValue={editing?.amount} />
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="categoryId" className="text-[15px] font-medium">
-          หมวดหมู่
+          {t("หมวดหมู่", "Category")}
         </label>
         <select
           id="categoryId"
           name="categoryId"
           defaultValue={editing?.category_id}
           required
-          className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]"
+          className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-base sm:text-[15px]"
         >
           {options.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {localizeDefaultName(locale, c.name)}
             </option>
           ))}
         </select>
@@ -115,15 +108,15 @@ export function TransactionForm({
       {accounts.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="accountId" className="text-[15px] font-medium">
-            บัญชี
+            {t("บัญชี", "Account")}
           </label>
           <select
             id="accountId"
             name="accountId"
             defaultValue={editing?.account_id ?? ""}
-            className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]"
+            className="border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-base sm:text-[15px]"
           >
-            <option value="">ไม่ระบุ</option>
+            <option value="">{t("ไม่ระบุ", "Not specified")}</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -136,7 +129,7 @@ export function TransactionForm({
       <Field
         id="occurredOn"
         name="occurredOn"
-        label="วันที่"
+        label={t("วันที่", "Date")}
         type="date"
         defaultValue={editing?.occurred_on ?? today}
         required
@@ -145,9 +138,9 @@ export function TransactionForm({
       <Field
         id="note"
         name="note"
-        label="บันทึกย่อ"
+        label={t("บันทึกย่อ", "Note")}
         defaultValue={editing?.note ?? ""}
-        placeholder="ไม่ใส่ก็ได้"
+        placeholder={t("ไม่ใส่ก็ได้", "Optional")}
         maxLength={200}
       />
 
@@ -155,11 +148,11 @@ export function TransactionForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending} className="flex-1">
-          {pending ? "กำลังบันทึก" : "บันทึก"}
+          {pending ? t("กำลังบันทึก", "Saving") : t("บันทึก", "Save")}
         </Button>
         {editing && (
           <Button type="button" variant="secondary" onClick={onDone}>
-            ยกเลิก
+            {t("ยกเลิก", "Cancel")}
           </Button>
         )}
       </div>

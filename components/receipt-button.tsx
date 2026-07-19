@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/transactions/receipt-actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/components/locale-provider";
 
 export function ReceiptButton({
   transactionId,
@@ -17,6 +18,7 @@ export function ReceiptButton({
   transactionId: string;
   receiptPath: string | null;
 }) {
+  const { t } = useLocale();
   const [state, action, pending] = useActionState<ReceiptState, FormData>(uploadReceipt, null);
   const [open, setOpen] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -36,16 +38,16 @@ export function ReceiptButton({
           }}
           className="text-text-muted rounded-full px-3 py-1.5 text-sm hover:bg-hover"
         >
-          {opening ? "กำลังเปิด" : "ใบเสร็จ"}
+          {opening ? t("กำลังเปิด", "Opening") : t("ใบเสร็จ", "Receipt")}
         </button>
         <form action={removeReceipt}>
           <input type="hidden" name="id" value={transactionId} />
           <button
             type="submit"
-            aria-label="ลบใบเสร็จของรายการนี้"
+            aria-label={t("ลบใบเสร็จของรายการนี้", "Delete this receipt")}
             className="text-text-muted rounded-full px-2 py-1.5 text-sm hover:bg-hover"
           >
-            ลบ
+            {t("ลบ", "Delete")}
           </button>
         </form>
       </div>
@@ -59,7 +61,7 @@ export function ReceiptButton({
         onClick={() => setOpen(true)}
         className="text-text-muted shrink-0 rounded-full px-3 py-1.5 text-sm hover:bg-hover"
       >
-        แนบใบเสร็จ
+        {t("แนบใบเสร็จ", "Attach receipt")}
       </button>
     );
   }
@@ -71,19 +73,19 @@ export function ReceiptButton({
         type="file"
         name="file"
         accept="image/jpeg,image/png,image/webp,application/pdf"
-        aria-label="ไฟล์ใบเสร็จ"
+        aria-label={t("ไฟล์ใบเสร็จ", "Receipt file")}
         required
-        className="max-w-40 text-sm"
+        className="max-w-40 text-base sm:text-sm"
       />
       <Button type="submit" variant="secondary" disabled={pending} className="px-3 py-1.5 text-sm">
-        {pending ? "กำลังอัป" : "อัปโหลด"}
+        {pending ? t("กำลังอัป", "Uploading") : t("อัปโหลด", "Upload")}
       </Button>
       <button
         type="button"
         onClick={() => setOpen(false)}
         className="text-text-muted rounded-full px-2 py-1.5 text-sm hover:bg-hover"
       >
-        ปิด
+        {t("ปิด", "Close")}
       </button>
       {state && "error" in state && <Alert className="basis-full">{state.error}</Alert>}
     </form>

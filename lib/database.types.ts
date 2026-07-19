@@ -430,6 +430,26 @@ export type Database = {
       period_of: { Args: { cycle_day: number; d: string }; Returns: string }
       reset_my_categories: { Args: never; Returns: undefined }
       seed_default_categories: { Args: { target: string }; Returns: undefined }
+      transaction_calendar_summary: {
+        Args: {
+          p_account?: string
+          p_category?: string
+          p_from: string
+          p_kind?: Database["public"]["Enums"]["category_kind"]
+          p_max?: number
+          p_min?: number
+          p_q?: string
+          p_scope: string
+          p_to: string
+        }
+        Returns: {
+          bucket_start: string
+          expense: number
+          income: number
+          net: number
+          transaction_count: number
+        }[]
+      }
     }
     Enums: {
       account_kind: "cash" | "bank" | "credit" | "ewallet"

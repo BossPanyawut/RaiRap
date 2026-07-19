@@ -19,12 +19,192 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 1000 }, de
 
 // ============ สมัคร ============
 await page.goto(`${APP}/signup`);
-await page.fill("#displayName", "ปัญญาวุฒิ");
+await page.fill("#displayName", "E2E User");
 await page.fill("#email", email);
 await page.fill("#password", PW);
 await page.click('button[type=submit]');
 await page.waitForURL(APP + "/", { timeout: 20000 });
 check("สมัครแล้วเข้าหน้าภาพรวมได้", page.url() === APP + "/");
+
+// ============ navigation hierarchy ============
+{
+  const mainLabels = await page
+    .locator('nav[aria-label="เมนูหลัก"] a')
+    .allTextContents();
+  check(
+    "เมนูหลักเหลือภาพรวมและรายการ ส่วนโปรไฟล์เป็นทางเข้าฟีเจอร์รอง",
+    mainLabels.join("|") === "ภาพรวม|รายการ",
+    mainLabels.join(" | "),
+  );
+
+  await page.goto(`${APP}/profile`, { waitUntil: "networkidle" });
+  const profileHrefs = await page
+    .locator("main a")
+    .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  check(
+    "หน้าโปรไฟล์รวมทางเข้าฟีเจอร์รองครบ",
+    ["/budgets", "/goals", "/analytics", "/report", "/accounts", "/recurring", "/categories", "/settings"].every(
+      (href) => profileHrefs.includes(href),
+    ),
+    profileHrefs.join(" | "),
+  );
+
+  await page.click('[data-locale-option="en"]');
+  await page.waitForFunction(() => document.documentElement.lang === "en");
+  const englishShell = await page.evaluate(() => ({
+    lang: document.documentElement.lang,
+    title: document.querySelector("main h1")?.textContent,
+    nav: [...document.querySelectorAll('nav[aria-label="Main navigation"] a')].map((item) => item.textContent.trim()),
+  }));
+  check(
+    "เปลี่ยนภาษาอังกฤษแล้วอัปเดต lang เมนู และโปรไฟล์ตั้งแต่ server render",
+    englishShell.lang === "en" && englishShell.title === "Profile" && englishShell.nav.join("|") === "Overview|Transactions",
+    JSON.stringify(englishShell),
+  );
+
+  const englishRoutes = [
+    "/",
+    "/transactions",
+    "/transactions?view=calendar&scope=month",
+    "/budgets",
+    "/goals",
+    "/analytics",
+    "/profile",
+    "/report",
+    "/accounts",
+    "/recurring",
+    "/categories",
+    "/settings",
+  ];
+  const thaiLeaks = [];
+  for (const path of englishRoutes) {
+    await page.goto(`${APP}${path}`, { waitUntil: "networkidle" });
+    const leaks = await page.evaluate(() => {
+      // Thai letters, marks, and digits. Deliberately excludes ฿ (U+0E3F),
+      // which remains the user's currency symbol in the English interface.
+      const thai = /[\u0E01-\u0E3A\u0E40-\u0E5B]/;
+      const values = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const parent = node.parentElement;
+        if (!parent || parent.closest("script, style, [data-locale-option='th']")) continue;
+        const value = node.textContent.trim();
+        if (value && thai.test(value)) values.push(value);
+      }
+      for (const element of document.querySelectorAll("[aria-label], [placeholder], [title]")) {
+        if (element.closest("[data-locale-option='th']")) continue;
+        for (const attribute of ["aria-label", "placeholder", "title"]) {
+          const value = element.getAttribute(attribute)?.trim();
+          if (value && thai.test(value)) values.push(`${attribute}=${value}`);
+        }
+      }
+      return [...new Set(values)];
+    });
+    if (leaks.length) thaiLeaks.push(`${path}: ${leaks.join(" | ")}`);
+  }
+  check(
+    "ภาษาอังกฤษครอบคลุมทุกหน้าหลัก ไม่มีข้อความ UI ภาษาไทยหลงเหลือ",
+    thaiLeaks.length === 0,
+    thaiLeaks.join(" || ") || `${englishRoutes.length} routes`,
+  );
+
+  const authContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const appUrl = new URL(APP);
+  await authContext.addCookies([{
+    name: "rairap-locale",
+    value: "en",
+    domain: appUrl.hostname,
+    path: "/",
+  }]);
+  const authPage = await authContext.newPage();
+  const authLeaks = [];
+  for (const path of ["/login", "/signup"]) {
+    await authPage.goto(`${APP}${path}`, { waitUntil: "networkidle" });
+    const text = await authPage.locator("body").innerText();
+    const thai = /[\u0E01-\u0E3A\u0E40-\u0E5B]/;
+    if (thai.test(text)) authLeaks.push(`${path}: ${text.match(/[\u0E01-\u0E3A\u0E40-\u0E5B][^\n]*/g)?.join(" | ")}`);
+  }
+  await authContext.close();
+  check(
+    "หน้าเข้าสู่ระบบและสมัครสมาชิกเปลี่ยนเป็นภาษาอังกฤษ",
+    authLeaks.length === 0,
+    authLeaks.join(" || ") || "login + signup",
+  );
+
+  await page.click('[data-theme-option="dark"]');
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  check(
+    "เปลี่ยนธีมจากหน้าโปรไฟล์แล้วใช้กับ HTML ทันที",
+    await page.evaluate(() => document.documentElement.dataset.theme === "dark"),
+  );
+  await page.click('[data-theme-option="light"]');
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+  await page.click('[data-locale-option="th"]');
+  await page.waitForFunction(() => document.documentElement.lang === "th");
+  await page.goto(APP + "/", { waitUntil: "networkidle" });
+}
+
+// ============ จดจำฉัน ============
+async function loginCookieMode(rememberMe, cookie = "") {
+  const loginPage = await fetch(`${APP}/login`, {
+    headers: cookie ? { cookie } : {},
+  });
+  const html = await loginPage.text();
+  const form = new FormData();
+  for (const match of html.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?\/>/g)) {
+    form.append(
+      match[1],
+      (match[2] ?? "").replaceAll("&quot;", '"').replaceAll("&amp;", "&"),
+    );
+  }
+  form.append("email", email);
+  form.append("password", PW);
+  if (rememberMe) form.append("rememberMe", "on");
+
+  const response = await fetch(`${APP}/login`, {
+    method: "POST",
+    headers: cookie ? { cookie } : {},
+    body: form,
+    redirect: "manual",
+  });
+  const setCookies = response.headers.getSetCookie();
+  const auth = setCookies.filter(
+    (value) => /^sb-[^=]+=/.test(value) && !/Max-Age=0/i.test(value),
+  );
+  const markers = setCookies.filter((value) =>
+    value.startsWith("rairap-session-only="),
+  );
+  return { html, response, auth, markers };
+}
+
+{
+  const temporary = await loginCookieMode(false);
+  check(
+    "หน้า login มี checkbox จดจำฉัน",
+    /name="rememberMe"/.test(temporary.html) && /จดจำฉัน/.test(temporary.html),
+  );
+  check(
+    "ไม่เลือกจดจำฉัน → auth cookie อยู่เฉพาะ browser session",
+    temporary.response.status === 303 &&
+      temporary.auth.length > 0 &&
+      temporary.auth.every((value) => !/(?:Max-Age|Expires)=/i.test(value)) &&
+      temporary.markers.some(
+        (value) => !/(?:Max-Age|Expires)=/i.test(value),
+      ),
+  );
+
+  const remembered = await loginCookieMode(true, "rairap-session-only=1");
+  check(
+    "เลือกจดจำฉัน → auth cookie มีอายุและล้าง session-only marker",
+    remembered.response.status === 303 &&
+      remembered.auth.length > 0 &&
+      remembered.auth.some((value) => /(?:Max-Age|Expires)=/i.test(value)) &&
+      remembered.markers.some((value) =>
+        /(?:Max-Age=0|Expires=Thu, 01 Jan 1970)/i.test(value),
+      ),
+  );
+}
 
 // ============ empty state ============
 {
@@ -60,6 +240,60 @@ await admin.from("transactions").insert(
 const expectIncome = tx.filter((t) => t.k === "income").reduce((s, t) => s + t.a, 0);
 const expectExpense = tx.filter((t) => t.k === "expense").reduce((s, t) => s + t.a, 0);
 const expectBalance = expectIncome - expectExpense;
+
+// ============ ตัวกรองช่วงเวลา + ปฏิทิน ============
+console.log("\n--- ตัวกรองช่วงเวลา + ปฏิทิน ---");
+await page.goto(`${APP}/transactions?view=calendar&scope=month&at=${PERIOD}-15`, { waitUntil: "networkidle" });
+{
+  const calendar = page.locator('[data-calendar-view="month"]');
+  check("เปิดมุมมองปฏิทินรายเดือนได้", await calendar.isVisible(), "");
+  check(
+    "ปฏิทินรายเดือนมีทุกวันของเดือน",
+    await calendar.locator('a[href*="scope=day"]').count() >= 28,
+    `พบ ${await calendar.locator('a[href*="scope=day"]').count()} วัน`,
+  );
+  const firstDay = calendar.locator('a[href*="at=' + day(1) + '"]');
+  const firstLabel = await firstDay.getAttribute("aria-label");
+  check(
+    "ยอดรายวันในปฏิทินรวมจาก Postgres ถูกต้อง",
+    /25,000\.00/.test(firstLabel ?? "") && /643\.68/.test(firstLabel ?? ""),
+    firstLabel ?? "ไม่พบวันแรก",
+  );
+
+  const nextMonth = new Date(`${PERIOD}-15T00:00:00Z`);
+  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+  const nextAnchor = nextMonth.toISOString().slice(0, 10);
+  await page.getByRole("button", { name: "ช่วงถัดไป" }).click();
+  await page.waitForURL((url) => url.searchParams.get("at") === nextAnchor);
+  check("ปุ่มช่วงถัดไปเปลี่ยนเดือนใน URL", page.url().includes(`at=${nextAnchor}`), page.url());
+
+  await page.locator("[data-open-time-filter]").click();
+  await page.getByRole("button", { name: "กำหนดช่วงเอง" }).click();
+  await page.waitForURL(/scope=custom/);
+  check(
+    "ช่วงกำหนดเองมีวันเริ่มและวันสิ้นสุด",
+    await page.locator('input[name="from"]').isVisible() && await page.locator('input[name="to"]').isVisible(),
+    page.url(),
+  );
+
+  await page.goto(`${APP}/transactions?view=list&scope=month&at=${PERIOD}-15`, { waitUntil: "networkidle" });
+  const amountColors = await page.locator("[data-transaction-amount]").evaluateAll((amounts) => {
+    const income = amounts.find((amount) => amount.dataset.kind === "income");
+    const expense = amounts.find((amount) => amount.dataset.kind === "expense");
+    return {
+      income: income ? getComputedStyle(income).color : "",
+      expense: expense ? getComputedStyle(expense).color : "",
+      incomeText: income?.textContent ?? "",
+      expenseText: expense?.textContent ?? "",
+    };
+  });
+  check(
+    "ตัวเลขรายรับ/รายจ่ายใช้คนละสีและยังมีเครื่องหมาย",
+    amountColors.income && amountColors.expense && amountColors.income !== amountColors.expense &&
+      amountColors.incomeText.trim().startsWith("+") && amountColors.expenseText.trim().startsWith("−"),
+    JSON.stringify(amountColors),
+  );
+}
 
 await page.goto(APP + "/", { waitUntil: "networkidle" });
 {

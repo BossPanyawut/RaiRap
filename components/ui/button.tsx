@@ -16,7 +16,7 @@ const variants: Record<Variant, string> = {
 
 function buttonClass(variant: Variant, className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-medium whitespace-nowrap",
+    "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-medium whitespace-nowrap",
     // spec §8 — 400ms ease-in-out ไม่เร่งรีบ
     "transition-all duration-400 ease-in-out",
     "disabled:pointer-events-none disabled:opacity-50",

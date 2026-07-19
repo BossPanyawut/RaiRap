@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BudgetEditor } from "@/components/budget-editor";
 import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
 import { getSettings } from "@/lib/profile";
+import { getI18n } from "@/lib/i18n-server";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function BudgetsPage({
@@ -10,6 +11,7 @@ export default async function BudgetsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { currency, cycleStartDay } = (await getSettings())!;
+  const { locale, t } = await getI18n();
   const raw = await searchParams;
   const period =
     z.iso
@@ -34,7 +36,7 @@ export default async function BudgetsPage({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 pb-16 sm:p-6">
       <h1 className="px-1 text-2xl font-semibold">
-        งบ {formatPeriodTH(period, cycleStartDay)}
+        {t("งบ", "Budgets")} {formatPeriodTH(period, cycleStartDay, locale)}
       </h1>
 
       <BudgetEditor

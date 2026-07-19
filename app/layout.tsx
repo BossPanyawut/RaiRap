@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Thai, Space_Grotesk } from "next/font/google";
+import { LocaleProvider } from "@/components/locale-provider";
+import { getLocale } from "@/lib/locale-server";
 import { getTheme } from "@/lib/theme";
 import "./globals.css";
 
@@ -23,9 +25,25 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-export const metadata: Metadata = {
-  title: "RaiRap — บันทึกรายรับ-รายจ่าย",
-  description: "ดูว่าเดือนนี้เหลือเท่าไหร่ และกำลังจะเหลือเท่าไหร่",
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return locale === "en"
+    ? {
+        title: "RaiRap — Income and expense tracker",
+        description: "See how much you have left this month and where it is heading.",
+      }
+    : {
+        title: "RaiRap — บันทึกรายรับ-รายจ่าย",
+        description: "ดูว่าเดือนนี้เหลือเท่าไหร่ และกำลังจะเหลือเท่าไหร่",
+      };
+}
+
+// เปิดพื้นที่ safe area ให้แถบนำทางมือถือหลบขอบจอและ home indicator ได้
+// ไม่ปิด userScalable — ผู้ใช้ยัง pinch-to-zoom ได้ตาม WCAG
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
@@ -33,17 +51,20 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // อ่าน theme ฝั่ง server แล้วใส่ตั้งแต่ HTML แรก — ถ้าไปอ่าน localStorage
   // ฝั่ง client จอจะสว่างวาบก่อนแล้วค่อยกลายเป็นมืด
-  const theme = await getTheme();
+  const [theme, locale] = await Promise.all([getTheme(), getLocale()]);
 
   return (
-    // lang="th" เป็นของจำเป็น ไม่ใช่ของประดับ — ไทยไม่เว้นวรรคระหว่างคำ
-    // ถ้าไม่ตั้ง เบราว์เซอร์ไม่ใช้ dictionary line-breaking แล้วตัดบรรทัดกลางคำ
+    // lang ต้องตรงกับภาษาที่เลือกตั้งแต่ HTML แรก เพื่อ line-breaking ภาษาไทย
+    // และการออกเสียงของ screen reader ที่ถูกต้อง
     <html
-      lang="th"
+      lang={locale}
       data-theme={theme}
+      data-locale={locale}
       className={`${spaceGrotesk.variable} ${plexThai.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

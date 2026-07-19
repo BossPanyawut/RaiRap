@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { parseCSV } from "@/lib/csv";
+import { getI18n } from "@/lib/i18n-server";
 import { createClient } from "@/lib/supabase/server";
 
 export type ImportState =
@@ -16,24 +17,25 @@ export async function importCSV(
   _prev: ImportState,
   formData: FormData,
 ): Promise<ImportState> {
+  const { locale, t } = await getI18n();
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "เลือกไฟล์ CSV ก่อน" };
-  if (file.size > MAX_BYTES) return { error: "ไฟล์ใหญ่เกิน 2 MB" };
+  if (!(file instanceof File) || file.size === 0) return { error: t("เลือกไฟล์ CSV ก่อน", "Choose a CSV file first") };
+  if (file.size > MAX_BYTES) return { error: t("ไฟล์ใหญ่เกิน 2 MB", "The file is larger than 2 MB") };
 
-  const { rows, errors } = parseCSV(await file.text());
+  const { rows, errors } = parseCSV(await file.text(), locale);
 
   if (rows.length === 0) {
-    return { error: errors[0] ?? "ไม่มีแถวที่นำเข้าได้" };
+    return { error: errors[0] ?? t("ไม่มีแถวที่นำเข้าได้", "No rows can be imported") };
   }
   if (rows.length > MAX_ROWS) {
-    return { error: `ไฟล์มี ${rows.length} แถว นำเข้าได้ครั้งละไม่เกิน ${MAX_ROWS}` };
+    return { error: t(`ไฟล์มี ${rows.length} แถว นำเข้าได้ครั้งละไม่เกิน ${MAX_ROWS}`, `The file has ${rows.length} rows. You can import up to ${MAX_ROWS} at a time.`) };
   }
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "เซสชันหมดอายุ เข้าสู่ระบบอีกครั้ง" };
+  if (!user) return { error: t("เซสชันหมดอายุ เข้าสู่ระบบอีกครั้ง", "Your session has expired. Sign in again.") };
 
   const { data: cats } = await supabase.from("categories").select("id, name, kind");
   const byKey = new Map((cats ?? []).map((c) => [`${c.kind}:${c.name}`, c.id]));
@@ -53,7 +55,7 @@ export async function importCSV(
       .from("categories")
       .insert([...missing.values()].map((m) => ({ user_id: user.id, name: m.name, kind: m.kind, sort_order: 50 })))
       .select("id, name, kind");
-    if (error) return { error: "สร้างหมวดหมู่ที่ขาดไม่สำเร็จ ลองอีกครั้ง" };
+    if (error) return { error: t("สร้างหมวดหมู่ที่ขาดไม่สำเร็จ ลองอีกครั้ง", "Could not create the missing categories. Try again.") };
     for (const c of made ?? []) byKey.set(`${c.kind}:${c.name}`, c.id);
   }
 
@@ -67,15 +69,17 @@ export async function importCSV(
       note: r.note,
     })),
   );
-  if (error) return { error: "นำเข้าไม่สำเร็จ ลองอีกครั้ง" };
+  if (error) return { error: t("นำเข้าไม่สำเร็จ ลองอีกครั้ง", "Could not import the file. Try again.") };
 
   for (const p of ["/", "/transactions", "/budgets", "/analytics", "/categories", "/settings"]) {
     revalidatePath(p);
   }
 
-  const newCats = missing.size ? ` สร้างหมวดใหม่ ${missing.size} หมวด` : "";
+  const newCats = missing.size
+    ? t(` สร้างหมวดใหม่ ${missing.size} หมวด`, ` and created ${missing.size} new categories`)
+    : "";
   return {
-    ok: `นำเข้า ${rows.length} รายการแล้ว${newCats}`,
+    ok: t(`นำเข้า ${rows.length} รายการแล้ว${newCats}`, `Imported ${rows.length} transactions${newCats}`),
     // บอกทุกแถวที่ข้าม ไม่ใช่แค่นับ — ผู้ใช้ต้องรู้ว่าแถวไหนหายเพราะอะไร
     skipped: errors,
   };

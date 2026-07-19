@@ -18,7 +18,7 @@ export function Field({
         id={id}
         aria-describedby={hintId}
         className={cn(
-          "border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-[15px]",
+          "border-glass-border rounded-2xl border bg-input px-4 py-2.5 text-base sm:text-[15px]",
           "placeholder:text-text-muted/70",
           "transition-colors duration-400 ease-in-out",
           "focus:bg-input-focus",

@@ -126,7 +126,7 @@ Tailwind v4 `@theme` แปลง token จาก spec §3 เป็น CSS var 
 | Money ในตาราง | IBM Plex Mono 400 | `tabular-nums` |
 
 - โหลดผ่าน `next/font/google` → self-host อัตโนมัติ ไม่มี FOUT ไม่ยิง Google ตอน runtime
-- **`<html lang="th">` เป็นของจำเป็น** — ไทยไม่เว้นวรรคระหว่างคำ ถ้าไม่ตั้ง เบราว์เซอร์ไม่ใช้ dictionary line-breaking → บรรทัดตัดกลางคำ
+- **`<html lang>` ต้องตรงกับ locale** — ค่า `th` เปิด dictionary line-breaking ภาษาไทย และค่า `en` ทำให้ screen reader ออกเสียงอังกฤษถูกต้อง
 - **ห้าม `letter-spacing` กับข้อความไทย** — ถ่างตัวอักษรจะแยกสระออกจากพยัญชนะ. ใช้กับ Latin/ตัวเลขได้
 - Glass: `.glass { background: rgba(255,255,255,.55); backdrop-filter: blur(20px) saturate(160%); border: 1px solid rgba(255,255,255,.8); border-radius: 24px }` — ห้าม nested
 - Liquid Light Sweep: hero card ใบเดียว (spec §6) — **animate `transform` เท่านั้น ห้าม `background-position`** ไม่งั้นบังคับคำนวณ blur ใหม่ทุกเฟรม. CSS ตัวเต็มอยู่ใน `design-direction.md` §D
@@ -137,7 +137,7 @@ Tailwind v4 `@theme` แปลง token จาก spec §3 เป็น CSS var 
 1. `npx create-next-app@latest . --ts --app --tailwind --eslint`
 2. ติดตั้ง deps, ตั้ง `.env.example`, zod-parse env
 3. `globals.css`: gradient background, `@theme` tokens, glass utility
-4. `next/font` 3 ตัว + `<html lang="th">` + กฎฟอนต์ตาม §4 (Grotesk = เงินเท่านั้น)
+4. `next/font` 3 ตัว + `<html lang>` ตาม locale + กฎฟอนต์ตาม §4 (Grotesk = เงินเท่านั้น)
 5. คอมโพเนนต์ฐาน: GlassCard, Button (primary/secondary), ProgressBar
 6. **Gate:** หน้า static ที่มี GlassCard 3 ใบบน gradient หน้าตาตรง spec §5. ตรวจ 3 อย่าง: หัวข้อไทยผสม Latin ("งบเดือน July") ต้องเป็นฟอนต์เดียวไร้รอยต่อ / วรรณยุกต์ซ้อนสองชั้น ("ปั๊ม", "ที่") ไม่ชนบรรทัดบน / ย่อหน้าไทยยาว ๆ ตัดบรรทัดตรงช่องว่างคำ ไม่ตัดกลางคำ
 
@@ -239,7 +239,9 @@ Schema ข้อ 2 เผื่อทางไว้แล้ว: multi-account 
    กับตัวอักษรขาว แต่ §8 สั่ง WCAG AA ทำพร้อมกันไม่ได้ เพิ่ม
    `--accent-primary-strong #2974cf` (= accent-primary ผสม accent-deep 20% → 4.67:1)
    ใช้เฉพาะพื้นทึบที่แบกตัวอักษรขาว ส่วน `--accent-primary` เดิมยังใช้กับเส้นกราฟ/ลิงก์
-8. **เมนู 5 อันไม่พอดี 360px** — ทำให้ทั้งหน้าเลื่อนแนวนอน แก้ด้วยให้แถบเมนูเลื่อน
+8. **เมนู 5 อันไม่พอดี 360px** — แถบเลื่อนแนวนอนซ่อนเมนูท้ายและไม่เหมือน mobile
+   navigation จริง แก้ด้วย top utility bar + bottom tab bar 3 ช่องเท่ากัน มีไอคอนและ label
+   พร้อม safe area; desktop ≥640px ใช้ top navigation เดิม
    ในตัวเอง
 
 **กราฟ (จากสกิล `dataviz`):**

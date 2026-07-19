@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useLocale } from "@/components/locale-provider";
 import { formatDateTH } from "@/lib/dates";
 import { suggestCuts, type CategorySpend } from "@/lib/forecast";
 import { formatMoney, type Currency } from "@/lib/money";
@@ -29,6 +30,7 @@ function GoalCard({
   categories: CategorySpend[];
   currency: Currency;
 }) {
+  const { locale, t } = useLocale();
   const target = Number(goal.target_amount);
 
   // เดือนที่เหลือถึงกำหนด — ไม่มีกำหนดก็คำนวณไม่ได้ ไม่เดาให้
@@ -55,8 +57,8 @@ function GoalCard({
           </p>
           {goal.target_date && (
             <p className="text-text-muted mt-1 text-sm">
-              ภายใน {formatDateTH(goal.target_date)}
-              {monthsLeft !== null && ` · เหลือ ${monthsLeft} เดือน`}
+              {t("ภายใน", "By")} {formatDateTH(goal.target_date, true, locale)}
+              {monthsLeft !== null && ` · ${t("เหลือ", "in")} ${monthsLeft} ${t("เดือน", "months")}`}
             </p>
           )}
         </div>
@@ -66,7 +68,7 @@ function GoalCard({
             type="submit"
             className="text-text-muted shrink-0 rounded-full px-3 py-1.5 text-sm hover:bg-hover"
           >
-            ลบ
+            {t("ลบ", "Delete")}
           </button>
         </form>
       </div>
@@ -74,29 +76,29 @@ function GoalCard({
       <div className="border-glass-border mt-4 border-t pt-4">
         {monthsLeft === null ? (
           <p className="text-text-muted text-[15px]">
-            ใส่วันที่เป้าหมายเพื่อให้คำนวณว่าต้องเก็บเดือนละเท่าไหร่
+            {t("ใส่วันที่เป้าหมายเพื่อให้คำนวณว่าต้องเก็บเดือนละเท่าไหร่", "Add a target date to calculate the monthly saving required.")}
           </p>
         ) : monthsLeft === 0 ? (
-          <p className="text-[15px]">ถึงกำหนดแล้ว</p>
+          <p className="text-[15px]">{t("ถึงกำหนดแล้ว", "Due now")}</p>
         ) : (
           <>
             <p className="text-[15px]">
-              ต้องเก็บเดือนละ{" "}
+              {t("ต้องเก็บเดือนละ", "Save per month")}{" "}
               <span className="tabular font-medium">
                 {formatMoney(needPerMonth!, currency)}
               </span>
             </p>
             <p className="text-text-muted mt-1 text-sm">
-              ตอนนี้เหลือเดือนละ{" "}
+              {t("ตอนนี้เหลือเดือนละ", "Current monthly balance")}{" "}
               <span className="tabular">{formatMoney(monthlyNet, currency)}</span>
             </p>
 
             {onTrack ? (
-              <p className="mt-3 text-[15px]">อัตราปัจจุบันถึงเป้าได้</p>
+              <p className="mt-3 text-[15px]">{t("อัตราปัจจุบันถึงเป้าได้", "Your current rate is on track")}</p>
             ) : (
               <>
                 <p className="mt-3 text-[15px]">
-                  ยังขาดเดือนละ{" "}
+                  {t("ยังขาดเดือนละ", "Monthly shortfall")}{" "}
                   <span className="tabular font-medium">
                     {formatMoney(gap!, currency)}
                   </span>
@@ -104,7 +106,7 @@ function GoalCard({
                 {cuts.length > 0 && (
                   <>
                     <p className="text-text-muted mt-2 text-sm">
-                      ลดตามสัดส่วนที่ใช้จริง หมวดที่ใช้เยอะรับภาระมากกว่า
+                      {t("ลดตามสัดส่วนที่ใช้จริง หมวดที่ใช้เยอะรับภาระมากกว่า", "Suggested cuts are proportional to actual spending.")}
                     </p>
                     <ul className="mt-2 flex flex-col gap-1.5">
                       {cuts.map((c) => (
@@ -114,7 +116,7 @@ function GoalCard({
                         >
                           <span className="truncate">{c.name}</span>
                           <span className="tabular text-text-muted shrink-0 text-sm">
-                            ลด {formatMoney(c.cut, currency)} ({Math.round(c.pct)}%)
+                            {t("ลด", "Cut")} {formatMoney(c.cut, currency)} ({Math.round(c.pct)}%)
                           </span>
                         </li>
                       ))}
@@ -141,18 +143,19 @@ export function GoalsManager({
   categories: CategorySpend[];
   currency: Currency;
 }) {
+  const { t } = useLocale();
   const [state, action, pending] = useActionState<GoalState, FormData>(createGoal, null);
 
   return (
     <>
       <GlassCard className="p-5">
-        <h2 className="text-xl font-semibold">เพิ่มเป้าหมาย</h2>
+        <h2 className="text-xl font-semibold">{t("เพิ่มเป้าหมาย", "Add goal")}</h2>
         <form action={action} className="mt-4 flex flex-col gap-4">
-          <Field id="name" name="name" label="เป้าหมาย" placeholder="เช่น ทริปญี่ปุ่น" maxLength={60} required />
+          <Field id="name" name="name" label={t("เป้าหมาย", "Goal")} placeholder={t("เช่น ทริปญี่ปุ่น", "e.g. Japan trip")} maxLength={60} required />
           <Field
             id="targetAmount"
             name="targetAmount"
-            label="ต้องเก็บให้ได้"
+            label={t("ต้องเก็บให้ได้", "Target amount")}
             type="number"
             inputMode="decimal"
             step="0.01"
@@ -160,17 +163,17 @@ export function GoalsManager({
             className="money"
             required
           />
-          <Field id="targetDate" name="targetDate" label="ภายในวันที่" type="date" hint="ไม่ใส่ก็ได้ แต่ใส่แล้วจะคำนวณให้ว่าต้องเก็บเดือนละเท่าไหร่" />
+          <Field id="targetDate" name="targetDate" label={t("ภายในวันที่", "Target date")} type="date" hint={t("ไม่ใส่ก็ได้ แต่ใส่แล้วจะคำนวณให้ว่าต้องเก็บเดือนละเท่าไหร่", "Optional. Add a date to calculate the monthly saving required.")} />
           {state && "error" in state && <Alert>{state.error}</Alert>}
           <Button type="submit" disabled={pending} className="self-start">
-            {pending ? "กำลังบันทึก" : "บันทึก"}
+            {pending ? t("กำลังบันทึก", "Saving") : t("บันทึก", "Save")}
           </Button>
         </form>
       </GlassCard>
 
       {goals.length === 0 ? (
         <GlassCard className="p-0">
-          <EmptyState title="ยังไม่มีเป้าหมาย ตั้งสักอันแล้วระบบจะบอกว่าต้องเก็บเดือนละเท่าไหร่" />
+          <EmptyState title={t("ยังไม่มีเป้าหมาย ตั้งสักอันแล้วระบบจะบอกว่าต้องเก็บเดือนละเท่าไหร่", "No goals yet. Add one to see how much to save each month.")} />
         </GlassCard>
       ) : (
         goals.map((g) => (

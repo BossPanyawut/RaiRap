@@ -150,6 +150,18 @@ console.log("\n--- CSV ---");
   check("บันทึกย่อที่มีลูกน้ำ+ฟันหนูรอดไป-กลับ", back.rows[0].note === 'ข้าว, น้ำ "พิเศษ"',
     JSON.stringify(back.rows[0].note));
   check("จำนวนเงินไม่เพี้ยน", back.rows[0].amount === 1234.56, String(back.rows[0].amount));
+
+  const csvEN = toCSV(rows, "en");
+  const backEN = parseCSV(csvEN, "en");
+  check(
+    "CSV ภาษาอังกฤษใช้หัวตารางและประเภทรายการภาษาอังกฤษ",
+    csvEN.includes("Date,Type,Category,Amount,Note") && csvEN.includes(",Expense,") && csvEN.includes(",Income,"),
+  );
+  check(
+    "CSV ภาษาอังกฤษนำกลับเข้าได้ครบ",
+    backEN.rows.length === 2 && backEN.errors.length === 0,
+    backEN.errors.join(" | "),
+  );
 }
 {
   const bad = parseCSV("วันที่,ประเภท,หมวดหมู่,จำนวนเงิน,บันทึกย่อ\n2026-13-99,รายจ่าย,อาหาร,100,\nไม่ใช่วันที่,รายจ่าย,อาหาร,50,\n2026-07-01,ขยะ,อาหาร,50,\n2026-07-01,รายจ่าย,อาหาร,-5,\n2026-07-01,รายจ่าย,อาหาร,100,ok");
@@ -159,6 +171,8 @@ console.log("\n--- CSV ---");
 {
   const r = parseCSV("ผิด,หัว,ตาราง\n1,2,3");
   check("หัวตารางผิด → บอกทันที ไม่นำเข้ามั่ว", r.rows.length === 0 && r.errors.length === 1);
+  const rEN = parseCSV("wrong,header\n1,2,3", "en");
+  check("หัวตารางผิดในโหมดอังกฤษ → แจ้งเป็นอังกฤษ", rEN.errors[0]?.startsWith("The header does not match"));
 }
 
 // ═══════════ ลบบัญชี ═══════════

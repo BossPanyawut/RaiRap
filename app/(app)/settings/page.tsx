@@ -1,12 +1,14 @@
 import { SettingsForm } from "@/components/settings-form";
 import { currentPeriod, periodRange } from "@/lib/dates";
+import { localeCopy } from "@/lib/locale";
+import { getLocale } from "@/lib/locale-server";
 import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getTheme } from "@/lib/theme";
 
 export default async function SettingsPage() {
   const settings = (await getSettings())!;
-  const theme = await getTheme();
+  const [theme, locale] = await Promise.all([getTheme(), getLocale()]);
   const period = currentPeriod(settings.cycleStartDay);
   const range = periodRange(period, settings.cycleStartDay);
   const supabase = await createClient();
@@ -24,13 +26,14 @@ export default async function SettingsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pb-16 sm:p-6">
-      <h1 className="px-1 text-2xl font-semibold">ตั้งค่า</h1>
+      <h1 className="px-1 text-2xl font-semibold">{localeCopy[locale].settingsTitle}</h1>
       <SettingsForm
         email={settings.email}
         displayName={settings.displayName}
         currency={settings.currency}
         cycleStartDay={settings.cycleStartDay}
         theme={theme}
+        locale={locale}
         counts={{ all: all ?? 0, period: inPeriod ?? 0 }}
       />
     </main>

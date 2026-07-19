@@ -3,10 +3,12 @@ import { WhatIf } from "@/components/what-if";
 import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
 import { getCategorySpend } from "@/lib/period-data";
 import { getSettings } from "@/lib/profile";
+import { getI18n } from "@/lib/i18n-server";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function GoalsPage() {
   const { currency, cycleStartDay } = (await getSettings())!;
+  const { locale, t } = await getI18n();
   const period = currentPeriod(cycleStartDay);
   const supabase = await createClient();
 
@@ -33,9 +35,9 @@ export default async function GoalsPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pb-16 sm:p-6">
       <div className="px-1">
-        <h1 className="text-2xl font-semibold">เป้าหมายและการวางแผน</h1>
+        <h1 className="text-2xl font-semibold">{t("เป้าหมายและการวางแผน", "Goals and planning")}</h1>
         <p className="text-text-muted mt-1 text-sm">
-          คำนวณจากยอดเหลือเฉลี่ย {nets.length} รอบล่าสุด
+          {t("คำนวณจากยอดเหลือเฉลี่ย", "Based on the average balance from the latest")} {nets.length} {t("รอบล่าสุด", "cycles")}
         </p>
       </div>
 
@@ -47,7 +49,7 @@ export default async function GoalsPage() {
       />
 
       <h2 className="mt-4 px-1 text-2xl font-semibold">
-        จำลอง {formatPeriodTH(period, cycleStartDay)}
+        {t("จำลอง", "Scenario")} {formatPeriodTH(period, cycleStartDay, locale)}
       </h2>
       <WhatIf
         categories={categories}

@@ -47,7 +47,12 @@ await page.fill("#password", PW);
 await page.click("button[type=submit]");
 await page.waitForURL(APP + "/", { timeout: 20000 });
 
-const PAGES = ["/", "/transactions", "/budgets", "/goals", "/analytics", "/report", "/accounts", "/recurring", "/categories", "/settings"];
+const PAGES = [
+  "/", "/transactions",
+  `/transactions?view=calendar&scope=month&at=${P}-15`,
+  `/transactions?view=calendar&scope=year&at=${P}-15`,
+  "/budgets", "/goals", "/analytics", "/profile", "/report", "/accounts", "/recurring", "/categories", "/settings",
+];
 
 for (const theme of ["light", "dark"]) {
   console.log(`\n--- axe-core (wcag2a + wcag2aa) — โหมด${theme === "light" ? "สว่าง" : "มืด"} ---`);
@@ -77,6 +82,36 @@ for (const theme of ["light", "dark"]) {
 }
 await page.context().addCookies([{ name: "rairap-theme", value: "light", url: APP }]);
 
+console.log("\n--- navigation แยกตามขนาดจอ ---");
+await page.goto(APP + "/", { waitUntil: "networkidle" });
+{
+  const nav = await page.evaluate(() => ({
+    desktop: getComputedStyle(document.querySelector("[data-desktop-nav]")).display,
+    mobileTop: getComputedStyle(document.querySelector("[data-mobile-topbar]")).display,
+    mobileBottom: getComputedStyle(document.querySelector("[data-mobile-nav]")).display,
+  }));
+  check(
+    "desktop แสดง top navigation ชุดเดียว",
+    nav.desktop === "flex" && nav.mobileTop === "none" && nav.mobileBottom === "none",
+    JSON.stringify(nav),
+  );
+}
+
+await page.goto(APP + "/transactions", { waitUntil: "networkidle" });
+{
+  await page.click("[data-open-detail-filters]");
+  const popover = await page.locator('[data-filter-panel="details"]').evaluate((panel) => ({
+    position: getComputedStyle(panel).position,
+    width: panel.getBoundingClientRect().width,
+  }));
+  check(
+    "desktop เปิดตัวกรองเป็น popover โดยไม่ดันรายการ",
+    popover.position === "absolute" && popover.width >= 400,
+    JSON.stringify(popover),
+  );
+  await page.locator("[data-filter-backdrop]").click({ position: { x: 4, y: 4 } });
+}
+
 console.log("\n--- 360px ไม่ล้นแนวนอน ---");
 const m = await browser.newPage({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 3 });
 await m.goto(`${APP}/login`);
@@ -84,6 +119,179 @@ await m.fill("#email", email);
 await m.fill("#password", PW);
 await m.click("button[type=submit]");
 await m.waitForURL(APP + "/", { timeout: 20000 });
+{
+  const mobile = await m.evaluate(() => {
+    const top = document.querySelector("[data-mobile-topbar]");
+    const bottom = document.querySelector("[data-mobile-nav]");
+    const desktop = document.querySelector("[data-desktop-nav]");
+    const targets = [...document.querySelectorAll(
+      "[data-mobile-topbar] a, [data-mobile-topbar] button, [data-mobile-nav] a",
+    )]
+      .filter((el) => getComputedStyle(el).display !== "none")
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return { label: el.getAttribute("aria-label") ?? el.textContent.trim(), width: r.width, height: r.height };
+      });
+    return {
+      top: getComputedStyle(top).display,
+      bottom: getComputedStyle(bottom).display,
+      bottomPosition: getComputedStyle(bottom).position,
+      desktop: getComputedStyle(desktop).display,
+      labels: [...bottom.querySelectorAll("a")].map((a) => a.textContent.trim()),
+      targets,
+      viewport: document.querySelector('meta[name="viewport"]')?.getAttribute("content") ?? "",
+    };
+  });
+  check(
+    "มือถือแสดง utility bar + fixed bottom navigation",
+    mobile.top === "flex" && mobile.bottom === "grid" &&
+      mobile.bottomPosition === "fixed" && mobile.desktop === "none",
+    JSON.stringify({ top: mobile.top, bottom: mobile.bottom, position: mobile.bottomPosition, desktop: mobile.desktop }),
+  );
+  check(
+    "bottom navigation มี 3 ปลายทางหลักพร้อม label",
+    mobile.labels.join("|") === "ภาพรวม|รายการ|โปรไฟล์",
+    mobile.labels.join(" | "),
+  );
+  const smallTargets = mobile.targets.filter((target) => target.width < 44 || target.height < 44);
+  check(
+    "touch target ใน navigation ไม่น้อยกว่า 44×44px",
+    smallTargets.length === 0,
+    smallTargets.map((target) => `${target.label} ${target.width}×${target.height}`).join(" | ") || "ผ่านทุกปุ่ม",
+  );
+  check(
+    "viewport รองรับ safe area และยัง pinch-to-zoom ได้",
+    mobile.viewport.includes("viewport-fit=cover") && !mobile.viewport.includes("user-scalable=no"),
+    mobile.viewport,
+  );
+}
+
+console.log("\n--- floating action button ---");
+await m.goto(APP + "/transactions", { waitUntil: "networkidle" });
+{
+  const compactToolbar = await m.locator("[data-transaction-toolbar]").evaluate((toolbar) => ({
+    height: toolbar.getBoundingClientRect().height,
+    fromVisible: Boolean(document.querySelector('input[name="from"]')),
+    detailSelectVisible: Boolean(document.querySelector('select[name="kind"]')),
+  }));
+  check(
+    "toolbar มือถือย่อเหลือไม่เกิน 140px และซ่อน field ที่ยังไม่ใช้",
+    compactToolbar.height <= 140 && !compactToolbar.fromVisible && !compactToolbar.detailSelectVisible,
+    JSON.stringify(compactToolbar),
+  );
+
+  await m.click("[data-open-time-filter]");
+  const sheet = await m.locator('[data-filter-panel="time"]').evaluate((panel) => {
+    const rect = panel.getBoundingClientRect();
+    return {
+      position: getComputedStyle(panel).position,
+      bottom: rect.bottom,
+      viewport: innerHeight,
+      height: rect.height,
+    };
+  });
+  check(
+    "มือถือเปิดช่วงเวลาเป็น bottom sheet สูงไม่เกิน 80dvh",
+    sheet.position === "fixed" && Math.abs(sheet.bottom - sheet.viewport) <= 1 && sheet.height <= sheet.viewport * 0.81,
+    JSON.stringify(sheet),
+  );
+  await m.locator("[data-filter-backdrop]").click({ position: { x: 4, y: 4 } });
+
+  await m.click("[data-open-detail-filters]");
+  await m.addScriptTag({ content: AXE });
+  const sheetAxe = await m.evaluate(async () =>
+    await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+      exclude: [["nextjs-portal"]],
+    }),
+  );
+  const sheetViolations = sheetAxe.violations.filter((violation) => violation.impact !== "minor");
+  check(
+    "bottom sheet ตัวกรองผ่าน axe",
+    sheetViolations.length === 0,
+    sheetViolations.map((violation) => violation.id).join(", ") || "ไม่มี violation",
+  );
+  await m.locator("[data-filter-backdrop]").click({ position: { x: 4, y: 4 } });
+
+  const fab = await m.evaluate(() => {
+    const button = document.querySelector("[data-transaction-fab]");
+    const nav = document.querySelector("[data-mobile-nav]");
+    const buttonRect = button.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    return {
+      position: getComputedStyle(button).position,
+      width: buttonRect.width,
+      height: buttonRect.height,
+      bottom: buttonRect.bottom,
+      navTop: navRect.top,
+    };
+  });
+  check(
+    "FAB เพิ่มรายการลอยเหนือ bottom navigation และกดง่าย",
+    fab.position === "fixed" && fab.width >= 44 && fab.height >= 44 && fab.bottom <= fab.navTop - 8,
+    JSON.stringify(fab),
+  );
+
+  await m.click("[data-transaction-fab]");
+  await m.waitForSelector("#add-transaction-form");
+  const opened = await m.evaluate(() => ({
+    formVisible: document.querySelector("#add-transaction-form")?.getBoundingClientRect().height > 0,
+    fabExists: Boolean(document.querySelector("[data-transaction-fab]")),
+    position: getComputedStyle(document.querySelector("[data-add-transaction-sheet]")).position,
+    bottom: document.querySelector("[data-add-transaction-sheet]").getBoundingClientRect().bottom,
+    viewport: innerHeight,
+  }));
+  check(
+    "กด FAB แล้วเปิดฟอร์มเป็น bottom sheet และซ่อนปุ่มลอย",
+    opened.formVisible && !opened.fabExists && opened.position === "fixed" && Math.abs(opened.bottom - opened.viewport) <= 1,
+    JSON.stringify(opened),
+  );
+
+  await m.click("[data-open-amount-calculator]");
+  await m.click('[data-calculator-key="clear"]');
+  await m.click('[data-calculator-key="1"]');
+  await m.click('[data-calculator-key="2"]');
+  await m.click('[data-calculator-key="add"]');
+  await m.click('[data-calculator-key="3"]');
+  await m.click('[data-calculator-key="equals"]');
+  const calculated = await m.locator('input[name="amount"]').inputValue();
+  check("เครื่องคิดเลขคำนวณ 12 + 3 แล้วใส่ผลกลับช่องจำนวนเงิน", calculated === "15", calculated);
+
+  await m.click("[data-open-amount-calculator]");
+  await m.addScriptTag({ content: AXE });
+  const transactionSheetAxe = await m.evaluate(async () =>
+    await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+      exclude: [["nextjs-portal"]],
+    }),
+  );
+  const transactionSheetViolations = transactionSheetAxe.violations.filter((violation) => violation.impact !== "minor");
+  check(
+    "bottom sheet เพิ่มรายการและเครื่องคิดเลขผ่าน axe",
+    transactionSheetViolations.length === 0,
+    transactionSheetViolations.map((violation) => violation.id).join(", ") || "ไม่มี violation",
+  );
+  await m.click("[data-close-amount-calculator]");
+  await m.click("[data-close-transaction-form]");
+}
+
+await m.goto(`${APP}/transactions?view=calendar&scope=month&at=${P}-15`, { waitUntil: "networkidle" });
+{
+  const smallDays = await m.locator('[data-calendar-view="month"] a[href*="scope=day"]').evaluateAll((days) =>
+    days
+      .map((day) => {
+        const rect = day.getBoundingClientRect();
+        return { label: day.getAttribute("aria-label"), width: rect.width, height: rect.height };
+      })
+      .filter((day) => day.width < 44 || day.height < 44),
+  );
+  check(
+    "ช่องวันในปฏิทินมี touch target อย่างน้อย 44×44px",
+    smallDays.length === 0,
+    smallDays.slice(0, 3).map((day) => `${day.label} ${day.width}×${day.height}`).join(" | ") || "ผ่านทุกวัน",
+  );
+}
+
 for (const path of PAGES) {
   await m.goto(APP + path, { waitUntil: "networkidle" });
   await m.waitForTimeout(500);
@@ -95,8 +303,41 @@ for (const path of PAGES) {
     return { overflow: de.scrollWidth > de.clientWidth, scrollW: de.scrollWidth, wide: wide.slice(0, 3) };
   });
   check(`360px ${path}`, !o.overflow, o.overflow ? `scrollW=${o.scrollW} ${o.wide.join(" | ")}` : "พอดีจอ");
+
+  await m.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  const spacing = await m.evaluate(() => {
+    const nav = document.querySelector("[data-mobile-nav]").getBoundingClientRect();
+    const last = document.querySelector("main")?.lastElementChild?.getBoundingClientRect();
+    return { navTop: nav.top, contentBottom: last?.bottom ?? 0 };
+  });
+  check(
+    `360px ${path} bottom navigation ไม่บังเนื้อหา`,
+    spacing.contentBottom <= spacing.navTop,
+    `content=${Math.round(spacing.contentBottom)} nav=${Math.round(spacing.navTop)}`,
+  );
 }
+{
+  const smallFields = await m.evaluate(() =>
+    [...document.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), select, textarea')]
+      .filter((el) => getComputedStyle(el).display !== "none")
+      .map((el) => ({ tag: el.tagName, name: el.getAttribute("name"), size: parseFloat(getComputedStyle(el).fontSize) }))
+      .filter((field) => field.size < 16),
+  );
+  check(
+    "ช่องกรอกบนมือถืออย่างน้อย 16px ไม่กระตุ้น iOS auto-zoom",
+    smallFields.length === 0,
+    smallFields.map((field) => `${field.tag}[${field.name}] ${field.size}px`).join(" | ") || "ผ่านทุกช่อง",
+  );
+}
+await m.goto(APP + "/", { waitUntil: "networkidle" });
+await m.evaluate(() => scrollTo(0, 0));
 await m.screenshot({ path: `${OUT}/final-mobile.png`, fullPage: true });
+await m.goto(APP + "/profile", { waitUntil: "networkidle" });
+await m.screenshot({ path: `${OUT}/final-mobile-profile.png`, fullPage: true });
+await m.goto(APP + "/transactions", { waitUntil: "networkidle" });
+await m.screenshot({ path: `${OUT}/final-mobile-transactions.png`, fullPage: true });
+await m.goto(`${APP}/transactions?view=calendar&scope=month&at=${P}-15`, { waitUntil: "networkidle" });
+await m.screenshot({ path: `${OUT}/final-mobile-calendar.png`, fullPage: true });
 
 console.log("\n--- keyboard focus มองเห็นไหม ---");
 await page.goto(APP + "/", { waitUntil: "networkidle" });

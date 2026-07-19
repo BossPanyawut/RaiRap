@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { signOut } from "../(auth)/actions";
 import { Nav } from "@/components/nav";
 import { getAlerts } from "@/lib/alerts";
+import { getLocale } from "@/lib/locale-server";
 import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,17 +21,19 @@ export default async function AppLayout({
   const supabase = await createClient();
   await supabase.rpc("materialize_recurring");
 
-  const alerts = await getAlerts();
+  const [alerts, locale] = await Promise.all([getAlerts(), getLocale()]);
 
   return (
     <>
       <Nav
         displayName={settings.displayName}
-        signOut={signOut}
         alerts={alerts}
         currency={settings.currency}
+        locale={locale}
       />
-      {children}
+      <div className="pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-0">
+        {children}
+      </div>
     </>
   );
 }

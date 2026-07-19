@@ -7,12 +7,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import { currentPeriod, formatPeriodTH, shiftPeriod } from "@/lib/dates";
 import { forecast } from "@/lib/forecast";
+import { getI18n } from "@/lib/i18n-server";
 import { formatMoney } from "@/lib/money";
 import { getSettings } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
   const settings = await getSettings();
+  const { locale, t } = await getI18n();
   const { currency, cycleStartDay } = settings!;
   const period = currentPeriod(cycleStartDay);
   const supabase = await createClient();
@@ -56,8 +58,8 @@ export default async function DashboardPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 pb-16 sm:p-6">
         <GlassCard className="hero-card p-0">
           <EmptyState
-            title="ยังไม่มีรายการเดือนนี้ เริ่มบันทึกรายการแรก แล้วยอดคงเหลือจะขึ้นตรงนี้"
-            action={<ButtonLink href="/transactions">เพิ่มรายการ</ButtonLink>}
+            title={t("ยังไม่มีรายการเดือนนี้ เริ่มบันทึกรายการแรก แล้วยอดคงเหลือจะขึ้นตรงนี้", "No transactions this month. Add your first one to see your balance here.")}
+            action={<ButtonLink href="/transactions">{t("เพิ่มรายการ", "Add transaction")}</ButtonLink>}
           />
         </GlassCard>
       </main>
@@ -68,19 +70,19 @@ export default async function DashboardPage() {
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 pb-16 sm:p-6">
       <GlassCard className="hero-card p-8 sm:p-10">
         <h1 className="text-text-muted text-[15px]">
-          ยอดคงเหลือ {formatPeriodTH(period, cycleStartDay)}
+          {t("ยอดคงเหลือ", "Balance")} {formatPeriodTH(period, cycleStartDay, locale)}
         </h1>
         <p className="money mt-2 text-5xl leading-tight font-semibold sm:text-6xl">
           {formatMoney(income - expense, currency)}
         </p>
         <p className="text-text-muted mt-3 text-[15px]">
-          รายรับ <span className="tabular">{formatMoney(income, currency)}</span> ·
-          รายจ่าย{" "}
+          {t("รายรับ", "Income")} <span className="tabular">{formatMoney(income, currency)}</span> ·
+          {t("รายจ่าย", "Expenses")}{" "}
           <span className="tabular">{formatMoney(expense, currency)}</span>
         </p>
         {summary && Number(summary.balance) !== income - expense && (
           <p className="text-text-muted mt-1 text-sm">
-            รวมยอดยกมาจากเดือนก่อน{" "}
+            {t("รวมยอดยกมาจากเดือนก่อน", "Including balance carried forward")}{" "}
             <span className="tabular">
               {formatMoney(Number(summary.balance), currency)}
             </span>
@@ -90,20 +92,20 @@ export default async function DashboardPage() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between px-1">
-          <h2 className="text-xl font-semibold">หมวดที่ต้องดู</h2>
+          <h2 className="text-xl font-semibold">{t("หมวดที่ต้องดู", "Categories to review")}</h2>
           <Link href="/budgets" className="text-link text-sm underline">
-            ดูงบทั้งหมด
+            {t("ดูงบทั้งหมด", "View all budgets")}
           </Link>
         </div>
 
         {needsAttention.length === 0 ? (
           // ไม่มีหมวดไหนเกิน 80% = ข่าวดี ไม่ใช่ empty state — น้ำเสียงจึงเรียบ
           <GlassCard className="p-5">
-            <p className="text-[15px]">ทุกหมวดยังอยู่ในงบ</p>
+            <p className="text-[15px]">{t("ทุกหมวดยังอยู่ในงบ", "All categories are within budget")}</p>
             <p className="text-text-muted mt-1 text-sm">
               {usage?.length
-                ? "ถ้าหมวดไหนใช้ถึง 80% ของวงเงิน จะขึ้นเตือนตรงนี้"
-                : "ยังไม่ได้ตั้งงบไว้ ตั้งงบแล้วระบบจะเตือนเมื่อใกล้เต็มวงเงิน"}
+                ? t("ถ้าหมวดไหนใช้ถึง 80% ของวงเงิน จะขึ้นเตือนตรงนี้", "Alerts appear here when a category reaches 80% of its limit.")
+                : t("ยังไม่ได้ตั้งงบไว้ ตั้งงบแล้วระบบจะเตือนเมื่อใกล้เต็มวงเงิน", "No budgets yet. Set one to receive alerts when it approaches the limit.")}
             </p>
           </GlassCard>
         ) : (
@@ -120,9 +122,9 @@ export default async function DashboardPage() {
       {trend.length >= 2 && (
         <GlassCard>
           <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-xl font-semibold">แนวโน้มยอดคงเหลือ</h2>
+            <h2 className="text-xl font-semibold">{t("แนวโน้มยอดคงเหลือ", "Balance trend")}</h2>
             <Link href="/analytics" className="text-link text-sm underline">
-              ดูวิเคราะห์
+              {t("ดูวิเคราะห์", "View analytics")}
             </Link>
           </div>
           <BalanceTrend rows={trend} currency={currency} cycleStartDay={cycleStartDay} />

@@ -1,6 +1,7 @@
 import type { Month } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { th } from "date-fns/locale";
+import { enUS, th } from "date-fns/locale";
+import type { Locale } from "@/lib/locale";
 
 /**
  * ตรึงทุกอย่างไว้ที่เวลาไทย
@@ -12,6 +13,8 @@ export const TZ = "Asia/Bangkok";
 /** วันเริ่มรอบจำกัด 1–28 เพราะทุกเดือนมีวันที่ 28 เสมอ (ตรงกับ check ใน DB) */
 export const MIN_CYCLE_DAY = 1;
 export const MAX_CYCLE_DAY = 28;
+
+export type TransactionPeriodScope = "day" | "week" | "month" | "year";
 
 function monthIndex(period: string): Month {
   return (Number(period.split("-")[1]) - 1) as Month;
@@ -71,25 +74,106 @@ export function periodRange(
 }
 
 /** "กรกฎาคม 2569" หรือ "25 ก.ค. – 24 ส.ค. 2569" ถ้ารอบไม่ตรงเดือนปฏิทิน */
-export function formatPeriodTH(period: string, cycleStartDay = 1): string {
+export function formatPeriodTH(period: string, cycleStartDay = 1, locale: Locale = "th"): string {
   const year = Number(period.split("-")[0]);
+  const dateLocale = locale === "en" ? enUS : th;
   if (cycleStartDay === 1) {
-    const month = th.localize.month(monthIndex(period), { width: "wide" });
-    return `${month} ${year + 543}`;
+    const month = dateLocale.localize.month(monthIndex(period), { width: "wide" });
+    return `${month} ${locale === "th" ? year + 543 : year}`;
   }
   const { from, to } = periodRange(period, cycleStartDay);
-  return `${formatDateTH(from, false)} – ${formatDateTH(to, false)} ${Number(to.slice(0, 4)) + 543}`;
+  const displayYear = locale === "th" ? Number(to.slice(0, 4)) + 543 : Number(to.slice(0, 4));
+  return `${formatDateTH(from, false, locale)} – ${formatDateTH(to, false, locale)} ${displayYear}`;
 }
 
 /** ป้ายสั้นบนแกนกราฟ — "ก.ค." */
-export function formatPeriodShortTH(period: string): string {
-  return th.localize.month(monthIndex(period), { width: "abbreviated" });
+export function formatPeriodShortTH(period: string, locale: Locale = "th"): string {
+  const dateLocale = locale === "en" ? enUS : th;
+  return dateLocale.localize.month(monthIndex(period), { width: "abbreviated" });
 }
 
 /** "16 ก.ค. 69" — สั้นสำหรับลิสต์รายการ */
-export function formatDateTH(iso: string, withYear = true): string {
+export function formatDateTH(iso: string, withYear = true, locale: Locale = "th"): string {
   const [y, , d] = iso.split("-").map(Number);
-  const month = th.localize.month(monthIndex(iso), { width: "abbreviated" });
+  const dateLocale = locale === "en" ? enUS : th;
+  const month = dateLocale.localize.month(monthIndex(iso), { width: "abbreviated" });
   const base = `${d} ${month}`;
-  return withYear ? `${base} ${String((y + 543) % 100).padStart(2, "0")}` : base;
+  const shortYear = locale === "th" ? (y + 543) % 100 : y;
+  return withYear ? `${base} ${locale === "th" ? String(shortYear).padStart(2, "0") : shortYear}` : base;
+}
+
+function utcDate(iso: string): Date {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function dateISO(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addDays(iso: string, days: number): string {
+  const date = utcDate(iso);
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateISO(date);
+}
+
+/** ช่วงเวลาปฏิทิน ใช้วันจันทร์เป็นวันแรกของสัปดาห์ตามการใช้งานในไทย */
+export function transactionPeriodRange(
+  anchor: string,
+  scope: TransactionPeriodScope,
+): { from: string; to: string } {
+  const [year, month] = anchor.split("-").map(Number);
+
+  if (scope === "day") return { from: anchor, to: anchor };
+
+  if (scope === "week") {
+    const day = utcDate(anchor).getUTCDay();
+    const mondayOffset = (day + 6) % 7;
+    const from = addDays(anchor, -mondayOffset);
+    return { from, to: addDays(from, 6) };
+  }
+
+  if (scope === "month") {
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return {
+      from: `${anchor.slice(0, 7)}-01`,
+      to: `${anchor.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }
+
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
+/** เลื่อน anchor โดยคงเลขวันไว้เท่าที่เดือน/ปีปลายทางมีจริง */
+export function shiftTransactionAnchor(
+  anchor: string,
+  scope: TransactionPeriodScope,
+  amount: number,
+): string {
+  if (scope === "day") return addDays(anchor, amount);
+  if (scope === "week") return addDays(anchor, amount * 7);
+
+  const [year, month, day] = anchor.split("-").map(Number);
+  const targetMonth = scope === "month" ? month - 1 + amount : month - 1;
+  const targetYear = scope === "year" ? year + amount : year;
+  const first = new Date(Date.UTC(targetYear, targetMonth, 1));
+  const lastDay = new Date(
+    Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  first.setUTCDate(Math.min(day, lastDay));
+  return dateISO(first);
+}
+
+export function formatTransactionPeriodTH(
+  anchor: string,
+  scope: TransactionPeriodScope,
+  locale: Locale = "th",
+): string {
+  if (scope === "day") return formatDateTH(anchor, true, locale);
+  if (scope === "week") {
+    const { from, to } = transactionPeriodRange(anchor, scope);
+    return `${formatDateTH(from, true, locale)} – ${formatDateTH(to, true, locale)}`;
+  }
+  if (scope === "month") return formatPeriodTH(`${anchor.slice(0, 7)}-01`, 1, locale);
+  return locale === "th" ? `ปี ${Number(anchor.slice(0, 4)) + 543}` : `Year ${Number(anchor.slice(0, 4))}`;
 }

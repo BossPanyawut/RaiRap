@@ -98,6 +98,25 @@ for (const v of ["v_monthly_summary", "v_running_balance", "v_budget_usage"]) {
   check("Alice เห็นสรุปของตัวเอง", data?.length === 1 && Number(data[0].expense) === 250.5,
     JSON.stringify(data?.[0]));
 }
+{
+  const args = {
+    p_from: "2026-07-01", p_to: "2026-07-31", p_scope: "month",
+  };
+  const [{ data: aliceSummary, error: aliceError }, { data: bobSummary, error: bobError }] = await Promise.all([
+    aliceC.rpc("transaction_calendar_summary", args),
+    bobC.rpc("transaction_calendar_summary", args),
+  ]);
+  check(
+    "calendar summary ของ Alice รวมเงินใน Postgres ถูกต้อง",
+    !aliceError && aliceSummary?.length === 1 && Number(aliceSummary[0].expense) === 250.5,
+    aliceError?.message ?? JSON.stringify(aliceSummary),
+  );
+  check(
+    "calendar summary ยังผ่าน RLS → Bob เห็น 0 แถว",
+    !bobError && bobSummary?.length === 0,
+    bobError?.message ?? `ได้ ${bobSummary?.length} แถว`,
+  );
+}
 
 // ---- GATE: anon (ไม่ล็อกอิน) ----
 console.log("\n--- GATE: ยังไม่ล็อกอิน ---");
@@ -108,6 +127,17 @@ for (const rel of ["transactions", "categories", "profiles", "budgets", "v_month
   // แข็งกว่าการกรองเหลือ 0 แถว — ยอมรับทั้งสองแบบ แต่ต้องไม่มีข้อมูลหลุด
   const blocked = error?.code === "42501" || data?.length === 0;
   check(`anon select ${rel} → เข้าไม่ถึง`, blocked, error?.code === "42501" ? "42501 ปฏิเสธที่ชั้น privilege" : `ได้ ${data?.length} แถว`);
+}
+{
+  const anonC = createClient(SB, ANON, { auth: { persistSession: false } });
+  const { data, error } = await anonC.rpc("transaction_calendar_summary", {
+    p_from: "2026-07-01", p_to: "2026-07-31", p_scope: "month",
+  });
+  check(
+    "anon เรียก calendar summary ไม่ได้",
+    Boolean(error) && !data,
+    error?.message ?? "เรียกได้ = สิทธิ์กว้างเกิน",
+  );
 }
 
 // ---- constraint integrity ----

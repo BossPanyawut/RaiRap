@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { AXIS, EXPENSE, GRID, INCOME, TOOLTIP_STYLE } from "@/lib/chart-palette";
+import { useLocale } from "@/components/locale-provider";
 import { formatPeriodShortTH, formatPeriodTH } from "@/lib/dates";
 import { formatAmount, formatMoney, type Currency } from "@/lib/money";
 
@@ -25,10 +26,11 @@ export function IncomeExpenseBar({
   currency: Currency;
   cycleStartDay: number;
 }) {
+  const { locale, t } = useLocale();
   if (rows.length === 0) {
     return (
       <p className="text-text-muted py-8 text-center text-[15px]">
-        ยังไม่มีข้อมูลให้เปรียบเทียบ
+        {t("ยังไม่มีข้อมูลให้เปรียบเทียบ", "No data to compare yet")}
       </p>
     );
   }
@@ -40,7 +42,7 @@ export function IncomeExpenseBar({
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis
             dataKey="period"
-            tickFormatter={(p: string) => formatPeriodShortTH(p)}
+            tickFormatter={(p: string) => formatPeriodShortTH(p, locale)}
             tick={{ fill: AXIS, fontSize: 12 }}
             tickLine={false}
             axisLine={false}
@@ -53,7 +55,7 @@ export function IncomeExpenseBar({
             width={56}
           />
           <Tooltip
-            labelFormatter={(p) => formatPeriodTH(String(p), cycleStartDay)}
+            labelFormatter={(p) => formatPeriodTH(String(p), cycleStartDay, locale)}
             formatter={(v) => formatMoney(Number(v), currency)}
             contentStyle={TOOLTIP_STYLE}
           />
@@ -65,14 +67,14 @@ export function IncomeExpenseBar({
           />
           <Bar
             dataKey="income"
-            name="รายรับ"
+            name={t("รายรับ", "Income")}
             fill={INCOME}
             radius={[4, 4, 0, 0]}
             isAnimationActive={false}
           />
           <Bar
             dataKey="expense"
-            name="รายจ่าย"
+            name={t("รายจ่าย", "Expenses")}
             fill={EXPENSE}
             radius={[4, 4, 0, 0]}
             isAnimationActive={false}

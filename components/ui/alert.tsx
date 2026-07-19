@@ -1,4 +1,8 @@
+"use client";
+
+import { useLocale } from "@/components/locale-provider";
 import { cn } from "@/lib/cn";
+import { localizeSystemMessage } from "@/lib/locale";
 
 /**
  * ข้อความบอกสถานะที่ผู้ใช้ต้องอ่าน — spec §9: บอกตรง ๆ ไม่ตำหนิ ไม่ขอโทษ
@@ -11,6 +15,11 @@ export function Alert({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { locale } = useLocale();
+  const content = typeof children === "string"
+    ? localizeSystemMessage(locale, children)
+    : children;
+
   return (
     <p
       role="alert"
@@ -33,7 +42,7 @@ export function Alert({
         <path d="M8 6.75v2.5" />
         <path d="M8 11.75h.01" />
       </svg>
-      <span>{children}</span>
+      <span>{content}</span>
     </p>
   );
 }

@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale } from "@/components/locale-provider";
 import { cn } from "@/lib/cn";
 import {
   budgetPct,
@@ -45,6 +48,7 @@ export function ProgressBar({
   currency: Currency;
   className?: string;
 }) {
+  const { t } = useLocale();
   const pct = budgetPct(spent, budget);
   const status = budgetStatus(pct);
 
@@ -65,7 +69,7 @@ export function ProgressBar({
         aria-valuenow={Math.round(Math.min(pct, 100))}
         // valuenow ถูก clamp ที่ 100 ตามสัญญาของ ARIA — valuetext จึงเป็นที่เดียว
         // ที่บอกความจริงว่าเกินไปเท่าไหร่ ให้ screen reader อ่าน
-        aria-valuetext={`ใช้ไป ${formatMoney(spent, currency)} จากงบ ${formatMoney(budget, currency)} คิดเป็น ${Math.round(pct)}%`}
+        aria-valuetext={`${t("ใช้ไป", "Spent")} ${formatMoney(spent, currency)} ${t("จากงบ", "of")} ${formatMoney(budget, currency)} (${Math.round(pct)}%)`}
         className="h-2 overflow-hidden rounded-full bg-input"
       >
         <div
@@ -82,7 +86,7 @@ export function ProgressBar({
       {status === "over" && (
         <p className="flex items-center gap-1.5 text-sm text-text-primary">
           <AlertIcon className="size-4 shrink-0" />
-          <span>ใช้เกินงบ {formatMoney(spent - budget, currency)}</span>
+          <span>{t("ใช้เกินงบ", "Over budget by")} {formatMoney(spent - budget, currency)}</span>
         </p>
       )}
     </div>

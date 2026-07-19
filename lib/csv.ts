@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Locale } from "@/lib/locale";
 
 export const CSV_HEADERS = [
   "วันที่",
@@ -7,6 +8,8 @@ export const CSV_HEADERS = [
   "จำนวนเงิน",
   "บันทึกย่อ",
 ] as const;
+
+export const CSV_HEADERS_EN = ["Date", "Type", "Category", "Amount", "Note"] as const;
 
 /**
  * ครอบค่าที่มี , " หรือขึ้นบรรทัดใหม่ ตาม RFC 4180
@@ -24,13 +27,16 @@ export type ExportRow = {
   note: string | null;
 };
 
-export function toCSV(rows: ExportRow[]): string {
-  const lines = [CSV_HEADERS.join(",")];
+export function toCSV(rows: ExportRow[], locale: Locale = "th"): string {
+  const headers = locale === "en" ? CSV_HEADERS_EN : CSV_HEADERS;
+  const lines = [headers.join(",")];
   for (const r of rows) {
     lines.push(
       [
         r.occurred_on,
-        r.kind === "income" ? "รายรับ" : "รายจ่าย",
+        locale === "en"
+          ? r.kind === "income" ? "Income" : "Expense"
+          : r.kind === "income" ? "รายรับ" : "รายจ่าย",
         escapeCell(r.category),
         // เขียนตัวเลขดิบ ไม่คั่นหลักพัน ไม่ใส่สัญลักษณ์สกุลเงิน — ไฟล์นี้มีไว้ให้
         // เครื่องอ่านกลับเข้ามาได้ ถ้าใส่ "฿ 1,234.50" จะ parse กลับไม่ได้
@@ -81,18 +87,26 @@ export type ParseResult = { rows: ParsedRow[]; errors: string[] };
 
 const isoDate = z.iso.date();
 
-export function parseCSV(text: string): ParseResult {
+export function parseCSV(text: string, locale: Locale = "th"): ParseResult {
+  const message = (thai: string, english: string) => locale === "en" ? english : thai;
   const clean = text.replace(/^﻿/, "");
   const lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const rows: ParsedRow[] = [];
   const errors: string[] = [];
 
-  if (lines.length === 0) return { rows, errors: ["ไฟล์ว่าง"] };
+  if (lines.length === 0) return { rows, errors: [message("ไฟล์ว่าง", "The file is empty")] };
 
   const header = splitLine(lines[0]).map((h) => h.trim());
-  if (header[0] !== CSV_HEADERS[0]) {
+  const isThaiHeader = header.length === CSV_HEADERS.length
+    && header.every((value, index) => value === CSV_HEADERS[index]);
+  const isEnglishHeader = header.length === CSV_HEADERS_EN.length
+    && header.every((value, index) => value === CSV_HEADERS_EN[index]);
+  if (!isThaiHeader && !isEnglishHeader) {
     errors.push(
-      `หัวตารางไม่ตรง แถวแรกต้องเป็น: ${CSV_HEADERS.join(", ")}`,
+      message(
+        `หัวตารางไม่ตรง แถวแรกต้องเป็น: ${CSV_HEADERS.join(", ")}`,
+        `The header does not match. The first row must be: ${CSV_HEADERS_EN.join(", ")}`,
+      ),
     );
     return { rows, errors };
   }
@@ -101,7 +115,7 @@ export function parseCSV(text: string): ParseResult {
     const n = i + 1;
     const c = splitLine(lines[i]).map((v) => v.trim());
     if (c.length < 4) {
-      errors.push(`แถว ${n}: มีไม่ครบ 4 คอลัมน์`);
+      errors.push(message(`แถว ${n}: มีไม่ครบ 4 คอลัมน์`, `Row ${n}: fewer than 4 columns`));
       continue;
     }
 
@@ -111,22 +125,36 @@ export function parseCSV(text: string): ParseResult {
     // regex \d{4}-\d{2}-\d{2} สบาย ๆ แล้วไปพังตอน insert ทำให้ทั้งไฟล์ล้ม
     // พร้อมข้อความรวม ๆ ที่ไม่บอกว่าแถวไหน
     if (!isoDate.safeParse(date).success) {
-      errors.push(`แถว ${n}: วันที่ "${date}" ไม่ใช่วันที่ที่มีอยู่จริง (ต้องเป็น ปปปป-ดด-วว)`);
+      errors.push(message(
+        `แถว ${n}: วันที่ "${date}" ไม่ใช่วันที่ที่มีอยู่จริง (ต้องเป็น ปปปป-ดด-วว)`,
+        `Row ${n}: "${date}" is not a valid date (use YYYY-MM-DD)`,
+      ));
       continue;
     }
-    const kind = kindTH === "รายรับ" ? "income" : kindTH === "รายจ่าย" ? "expense" : null;
+    const normalizedKind = kindTH.toLowerCase();
+    const kind = kindTH === "รายรับ" || normalizedKind === "income"
+      ? "income"
+      : kindTH === "รายจ่าย" || normalizedKind === "expense"
+        ? "expense"
+        : null;
     if (!kind) {
-      errors.push(`แถว ${n}: ประเภท "${kindTH}" ต้องเป็น รายรับ หรือ รายจ่าย`);
+      errors.push(message(
+        `แถว ${n}: ประเภท "${kindTH}" ต้องเป็น รายรับ หรือ รายจ่าย`,
+        `Row ${n}: type "${kindTH}" must be Income or Expense`,
+      ));
       continue;
     }
     if (!category) {
-      errors.push(`แถว ${n}: ไม่มีชื่อหมวดหมู่`);
+      errors.push(message(`แถว ${n}: ไม่มีชื่อหมวดหมู่`, `Row ${n}: category name is missing`));
       continue;
     }
     // ยอมรับทั้ง "1234.50" และ "1,234.50" ที่ Excel ชอบใส่ให้
     const amount = Number(amountRaw.replaceAll(",", ""));
     if (!Number.isFinite(amount) || amount <= 0) {
-      errors.push(`แถว ${n}: จำนวนเงิน "${amountRaw}" ต้องเป็นตัวเลขมากกว่า 0`);
+      errors.push(message(
+        `แถว ${n}: จำนวนเงิน "${amountRaw}" ต้องเป็นตัวเลขมากกว่า 0`,
+        `Row ${n}: amount "${amountRaw}" must be a number greater than 0`,
+      ));
       continue;
     }
 

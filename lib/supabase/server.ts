@@ -2,9 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 import { env } from "@/lib/env";
+import {
+  SESSION_ONLY_COOKIE,
+  sessionCookieOptions,
+} from "@/lib/auth-cookies";
 
-export async function createClient() {
+export async function createClient(options?: { sessionOnly?: boolean }) {
   const cookieStore = await cookies();
+  const sessionOnly =
+    options?.sessionOnly ?? cookieStore.get(SESSION_ONLY_COOKIE)?.value === "1";
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,7 +23,11 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options);
+              cookieStore.set(
+                name,
+                value,
+                sessionOnly ? sessionCookieOptions(value, options) : options,
+              );
             }
           } catch {
             // Server Component เขียน cookie ไม่ได้ — proxy.ts รีเฟรช session ให้แล้ว

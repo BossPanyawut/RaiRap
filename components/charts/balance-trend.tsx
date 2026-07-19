@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { AXIS, GRID, LINE, TOOLTIP_STYLE } from "@/lib/chart-palette";
+import { useLocale } from "@/components/locale-provider";
 import { formatPeriodShortTH, formatPeriodTH } from "@/lib/dates";
 import { formatAmount, formatMoney, type Currency } from "@/lib/money";
 
@@ -24,10 +25,11 @@ export function BalanceTrend({
   currency: Currency;
   cycleStartDay: number;
 }) {
+  const { locale, t } = useLocale();
   if (rows.length < 2) {
     return (
       <p className="text-text-muted py-8 text-center text-[15px]">
-        ต้องมีข้อมูลอย่างน้อย 2 เดือนถึงจะเห็นแนวโน้ม
+        {t("ต้องมีข้อมูลอย่างน้อย 2 เดือนถึงจะเห็นแนวโน้ม", "At least two months of data are needed to show a trend")}
       </p>
     );
   }
@@ -47,7 +49,7 @@ export function BalanceTrend({
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis
             dataKey="period"
-            tickFormatter={(p: string) => formatPeriodShortTH(p)}
+            tickFormatter={(p: string) => formatPeriodShortTH(p, locale)}
             tick={{ fill: AXIS, fontSize: 12 }}
             tickLine={false}
             axisLine={false}
@@ -60,8 +62,8 @@ export function BalanceTrend({
             width={56}
           />
           <Tooltip
-            labelFormatter={(p) => formatPeriodTH(String(p), cycleStartDay)}
-            formatter={(v) => [formatMoney(Number(v), currency), "ยอดคงเหลือสะสม"]}
+            labelFormatter={(p) => formatPeriodTH(String(p), cycleStartDay, locale)}
+            formatter={(v) => [formatMoney(Number(v), currency), t("ยอดคงเหลือสะสม", "Cumulative balance")]}
             contentStyle={TOOLTIP_STYLE}
           />
           <Area

@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
+import {
+  SESSION_ONLY_COOKIE,
+  sessionCookieOptions,
+} from "@/lib/auth-cookies";
 
 const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
 
@@ -14,6 +18,7 @@ const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const sessionOnly = request.cookies.get(SESSION_ONLY_COOKIE)?.value === "1";
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,7 +34,11 @@ export async function proxy(request: NextRequest) {
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
+            response.cookies.set(
+              name,
+              value,
+              sessionOnly ? sessionCookieOptions(value, options) : options,
+            );
           }
         },
       },

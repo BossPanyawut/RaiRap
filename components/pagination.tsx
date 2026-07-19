@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 
 export function Pagination({
@@ -12,6 +13,7 @@ export function Pagination({
   pageSize: number;
   total: number;
 }) {
+  const { t } = useLocale();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -29,12 +31,12 @@ export function Pagination({
   const to = Math.min(page * pageSize, total);
 
   return (
-    <nav className="flex items-center justify-between gap-3 px-1" aria-label="เปลี่ยนหน้า">
+    <nav className="flex items-center justify-between gap-3 px-1" aria-label={t("เปลี่ยนหน้า", "Pagination")}>
       <p className="text-text-muted text-sm">
         <span className="tabular">
           {from}–{to}
         </span>{" "}
-        จาก <span className="tabular">{total}</span> รายการ
+        {t("จาก", "of")} <span className="tabular">{total}</span> {t("รายการ", "transactions")}
       </p>
 
       {pages > 1 && (
@@ -46,7 +48,7 @@ export function Pagination({
             onClick={() => go(page - 1)}
             className="px-4 py-2 text-sm"
           >
-            ก่อนหน้า
+            {t("ก่อนหน้า", "Previous")}
           </Button>
           <span className="tabular text-text-muted text-sm whitespace-nowrap">
             {page} / {pages}
@@ -58,7 +60,7 @@ export function Pagination({
             onClick={() => go(page + 1)}
             className="px-4 py-2 text-sm"
           >
-            ถัดไป
+            {t("ถัดไป", "Next")}
           </Button>
         </div>
       )}
