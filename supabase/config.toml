@@ -212,7 +212,7 @@ password_requirements = ""
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 # 2 คือเพดานบังคับของ SMTP ในตัว — ตั้งสูงกว่านี้ไม่ได้จนกว่า [auth.email.smtp]
 # จะเปิด เมื่อต่อ Resend แล้วให้ขยับเป็น 100 (โควตา free ของ Resend = 3,000/เดือน)
-email_sent = 2
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -236,10 +236,10 @@ web3 = 30
 #   3. เปิดบล็อกข้างล่าง แล้ว TURNSTILE_SECRET_KEY=<secret> npx supabase config push
 # เปิดแค่ข้อ 3 โดยไม่มีข้อ 2 = login/signup พังทุกคน (server รอ token ที่ไม่มีใครส่ง)
 # เปิดแค่ข้อ 2 โดยไม่มีข้อ 3 = widget โชว์แต่ไม่มีใครตรวจ = ไม่ได้กันอะไร
-# [auth.captcha]
-# enabled = true
-# provider = "turnstile"
-# secret = "env(TURNSTILE_SECRET_KEY)"
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(TURNSTILE_SECRET_KEY)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -258,7 +258,7 @@ double_confirm_changes = true
 # ซึ่งไม่ใช่คนที่ถือบัญชีอยู่
 # → ก่อนเปิดให้คนนอกใช้: เปิดบล็อก [auth.email.smtp] (Resend) ข้างล่าง
 #   แล้วเปลี่ยนค่านี้เป็น true พร้อมกันใน push เดียว — ขั้นตอนเต็มใน docs/deploy.md §5
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 # แอปตรวจรหัสเดิมเองอยู่แล้วใน settings/actions.ts (changePassword/changeEmail)
 secure_password_change = false
@@ -279,14 +279,14 @@ otp_expiry = 3600
 #   3. เปิดบล็อกนี้ + เปลี่ยน enable_confirmations เป็น true +
 #      ขยับ [auth.rate_limit] email_sent จาก 2 → 100
 #   4. RESEND_API_KEY=<key> npx supabase config push
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.resend.com"
-# port = 587
-# user = "resend"
-# pass = "env(RESEND_API_KEY)"
-# admin_email = "no-reply@<โดเมนที่ verify กับ Resend>"
-# sender_name = "RaiRap"
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 587
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "onboarding@resend.dev"
+sender_name = "RaiRap"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
